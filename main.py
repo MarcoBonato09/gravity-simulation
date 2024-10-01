@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Literal
 
 import math # Used for its sin, cos, atan2, sqrt, ceil, and degrees functions
-import os # Used to forcefully exit the program
-import threading # Used to open the back-end main loop in a separate thread
+import os # Used for its os.kill function to forcefully exit the program
+import threading # Used to open the back-end main loop (see 2.6.2) in a separate thread
 import pygame # Used to draw the grid, bodies, orbit preview, etc.
 import tkinter # Used to create the user interface window
 from tkinter.ttk import Style # Used to change the appearance of widgets
@@ -18,7 +18,7 @@ from tkinter.ttk import Combobox, Notebook, Treeview
 
 
 class Vector:
-    """This class represents a 2d vector and is used throughout this program.
+    """This class represents a 2D vector and is used throughout this program.
     The components, magnitude and direction of the vector are stored."""
         
     def __init__(self,
@@ -30,6 +30,7 @@ class Vector:
         its components or its magnitude and direction."""
         
         # The __ before attribute names means that they are private
+        # Python does not actually enforce this, so this is only a convention
         self.__x_component = x_component
         self.__y_component = y_component
         self.__magnitude = magnitude
@@ -47,6 +48,7 @@ class Vector:
         """This function recalculates the components of 
         this vector using its magnitude and direction."""
         
+        # Here we resolve the vector into its components
         self.__x_component = self.__magnitude*math.cos(self.__direction)
         self.__y_component = self.__magnitude*math.sin(self.__direction)
              
@@ -54,11 +56,11 @@ class Vector:
     def recalculate_polar_form(self) -> None:
         """This function recalculates the magnitude and 
         direction of this vector using its components."""
-        
-        # Here we use the Pythagoras theorem to find this vector's magnitude
+                
+        # We use the Pythagoras theorem to find this vector's magnitude
         self.__magnitude = math.sqrt(self.__x_component**2 + self.__y_component**2)
         
-        # The atan2 function returns a vector's direction given its components
+        # The atan2 function returns a vector's direction given its components (see 1.3.1.2)
         self.__direction = math.atan2(self.__y_component, self.__x_component)
 
 
@@ -69,7 +71,7 @@ class Vector:
     
     @property
     def components(self) -> tuple[int|float, int|float]:
-        """This function returns the components of this vector , 
+        """This function returns the components of this vector, 
         vector as a tuple, starting with the x component."""
         
         return (self.x_component, self.y_component)
@@ -101,15 +103,16 @@ class Vector:
     @property
     def direction(self) -> int|float:
         """This function returns the direction of this vector in radians.
-        Remember that this is calculated anticlockwise starting East."""
+        Remember that this is measured anticlockwise starting East."""
         
         return self.__direction
     
     
     # We use @attribute.setter to give dynamically calculated attributes setters
     # We do this by updating the attributes used to calculate the dynamic attributes
-    # They are called automatically when calling <class>.dynamic_attribute = ...
+    # Setter functions are called automatically when calling <class>.dynamic_attribute = ...
     # For example, <vector>.x_component = ... calls the x_component function below
+    
     # We use this to give our private attributes setters, so that we can call one of 
     # the recalculate_ functions automatically when a private attribute is set
     
@@ -146,7 +149,8 @@ class Vector:
     @direction.setter
     def direction(self, new_direction: int|float) -> None:
         """This function sets the direction of this vector to the 
-        given value (in radians) and recalculates its components."""
+        given value (in radians) and recalculates its components.
+        Remember this is measured anticlockwise starting East."""
         
         self.__direction = new_direction
         self.recalculate_components()
@@ -170,7 +174,7 @@ class Vector:
     
     # The following methods with __ around their name are called magic methods
     # Here they are used to define mathematical operations on vectors
-    # They are called automatically when an operation is performed on a vector
+    # They are called automatically when a mathematical operation is performed on a vector
     # For example, <vector_1> + <vector_2> calls the __add__ method
         
     def __add__(self, other_vector: Vector) -> Vector:
@@ -192,7 +196,7 @@ class Vector:
     def __mul__(self, multiplication_value: int|float|Vector) -> Vector:
         """This function defines the multiplication operation for a vector.
         When a vector is multiplied by a numerical value its magnitude is 
-        multiplied by this value. Otherwise, if it is multiplied by a vector 
+        multiplied by this value. Otherwise, if it is multiplied by a vector, 
         then the dot product of the two vectors is returned."""
         
         # isinstance(x, a|b) checks if x is of type a or b
@@ -219,18 +223,16 @@ class Vector:
         
     
     def __truediv__(self, division_factor: int|float) -> Vector:
-        """This function defines the division operation for a vector.
-        When a vector is divided by a numerical value its magnitude 
-        is divided by this value."""
+        """This function defines the division operation for a vector. When a vector is
+        divided by a numerical value its magnitude is divided by this value."""
                 
         return Vector(magnitude = self.magnitude/division_factor, 
                       direction = self.direction)
     
     
     def __floordiv__(self, division_factor: int|float) -> Vector:
-        """This function defines the floor division operation for a vector.
-        When a vector is floor divided by a numerical value its components are 
-        floor divided by this value."""
+        """This function defines the floor division operation for a vector. When a vector
+        is floor divided by a value its components are floor divided by this value."""
         
         return Vector(self.x_component//division_factor, 
                       self.y_component//division_factor)
@@ -245,9 +247,8 @@ class Vector:
     
     
     def __neg__(self) -> Vector:
-        """This function defines the - symbol in front of a vector.
-        Specifically, -<vector> calls this function. 
-        This returns the vector with its components inverted."""
+        """This function defines the - symbol in front of a vector (i.e., -<vector>).
+        This returns a copy of this vector, but with its components inverted."""
         
         return Vector(-self.x_component, -self.y_component)
         
@@ -263,7 +264,7 @@ class Body:
                  radius: int|float, 
                  position: Vector) -> None:
         """This function initializes this body's attributes to the given values.
-        Other attributes such as velocity or acceleration are set to a default
+        Other attributes such as velocity or acceleration are set to a default 
         value and can then be changed by the user. All attributes use standard 
         Physics units (e.g. mass in kilograms, lengths in meters, etc.)."""
                 
@@ -280,9 +281,9 @@ class Body:
         
     def step_euler(self, time_step: int|float) -> None:
         """This function uses the Euler method to update the velocity and 
-        position of this body given the time step parameter (in seconds). The 
-        higher the time step parameter, the further the body will move, but 
-        the less accurate its movement. The opposite is also true. 
+        position of this body given the time step parameter (in seconds). 
+        The higher the time step parameter, the further the body will move, 
+        but the less accurate its movement. The opposite is also true. 
         If the body is immobile its velocity and acceleration are set to 0."""
         
         if not self.is_immobile:
@@ -297,28 +298,25 @@ class Body:
             
     @property
     def kinetic_energy(self) -> float:
-        """This function returns this body's kinetic energy in Joules"""
+        """This function returns this body's kinetic energy in Joules."""
         
         return 1/2*self.mass*self.velocity.magnitude**2
     
     
     @kinetic_energy.setter
     def kinetic_energy(self, new_kinetic_energy: int|float) -> None:
-        """This function sets the kinetic energy 
-        of this body to the inputted value."""
+        """This function sets the kinetic energy of this body to the inputted value."""
         
         self.velocity.magnitude = math.sqrt(2*new_kinetic_energy/self.mass)    
     
     
     @property
     def momentum(self) -> Vector:
-        """This function returns the momentum vector of this body"""
+        """This function returns the momentum vector of this body."""
         
-        return self.velocity*self.mass
+        return self.mass*self.velocity
     
-    
-    # Functions are used for angular attributes since they require parameters
-    
+        
     def angular_velocity(self, centered_body: Body, time_step: int|float) -> float:
         """This function returns the angular velocity of this body. By convention,
         it is positive if the body is rotating anticlockwise around the centered 
@@ -327,8 +325,8 @@ class Body:
         # Angular velocity is found by finding the change in direction of a vector
         # pointing from this body to the centered body, divided by the time taken
         
-        # <position_vector_2> - <position_vector_1> gives the displacement vector 
-        # from position 1 to position 2. This is used throughout this program.
+        # <position_vector_2> - <position_vector_1> gives the displacement vector from 
+        # position 1 to position 2 (see 1.3.1.3). This is used throughout this program.
         previous_angle = (centered_body.position-self.previous_position).direction
         current_angle = (centered_body.position-self.position).direction
         angular_velocity = (current_angle-previous_angle)/time_step
@@ -354,13 +352,13 @@ class Body:
 class BarnesHutNode:
     """This class represents one of the nodes in a Barnes-Hut quadtree. 
     It also stores the attributes of the square in space the node represents.
-    This is called the square of a node."""
+    This is called the square of a node, which is terminology used throughout the program."""
         
     def __init__(self,
                  contained_bodies: list[Body],
                  center: Vector,
                  width: int|float) -> None:
-        """This function initializes this node's attribute variables. 
+        """This function initializes this node's attributes. 
         It does not find properties such as its total mass or children. 
         That is handled by the BarnesHutTree class."""
         
@@ -370,31 +368,31 @@ class BarnesHutNode:
         self.center = center
         self.width = width
         
-        # These attributes reference the bodies contained in the square
+        # These attributes reference the bodies contained in this node's square
         self.total_mass = 0
         self.max_radius = 0
         self.center_of_mass = Vector(0, 0)
         
-        # This list stores this node's children (other BarnesHutNode objects)
-        # The values, in order, at each position, are the top left, top right, 
-        # bottom left and bottom right children respectively.
+        # This list stores this node's children (which are other BarnesHutNode objects)
+        # These are the nodes whose squares represent the top left, top right, bottom left
+        # and bottom right quadrants of this node's square respectively
         self.children: list[BarnesHutNode|None] = [None, None, None, None]
          
         
 class BarnesHutTree:
-    """This class is responsible for initializing and storing the root node 
-    of a Barnes-Hut quadtree. Operations such as traversal for finding 
-    forces or collision detection is handled by the Simulation class."""
+    """This class is responsible for initializing and storing the root node of a
+    Barnes-Hut quadtree Operations such as traversal for  
+    finding forces or collision detection is handled by the Simulation class."""
     
-    def __init__(self, contained_bodies: list[Body]) -> None:
+    def __init__(self, contained_bodies: tuple[Body]) -> None:
         """This function initializes the root node of the quadtree given a 
         list of the bodies in the simulation."""
         
-        root_center, root_width = self.find_bounding_box(contained_bodies)
+        root_center, root_width = self.find_bounding_square(contained_bodies)
         self.root_node = self.build_node(contained_bodies, root_center, root_width)
         
         
-    def find_bounding_box(self, contained_bodies: list[Body]) -> tuple[Vector, int]:
+    def find_bounding_square(self, contained_bodies: tuple[Body]) -> tuple[Vector, int]:
         """This function returns the center coordinates and width of the 
         smallest square that contains all the bodies in contained_bodies."""
         
@@ -417,6 +415,8 @@ class BarnesHutTree:
         max_difference = max(difference.components)
         width = math.ceil(max_difference) + 2
         
+        # Averaging the maximum and minimum coordinates gives the square's center.
+        # This is equivalent to moving halfway between a diagonal of the square
         center = (minimum_coordinates+maximum_coordinates)/2
         
         return center, width
@@ -432,52 +432,51 @@ class BarnesHutTree:
         node = BarnesHutNode(contained_bodies, center, width)
                         
         # This list stores the bodies in each quadrant of this node's square 
-        # In order, these lists store the bodies for the top left, top right, 
-        # bottom left and bottom right quadrants respectively
+        # In order, these lists store the bodies contained in the top left,
+        # top right, bottom left and bottom right quadrants respectively
         quadrant_bodies: list[list[Body]] = [[], [], [], []]
         
         # This loop sorts each body in contained_bodies into one of the
         # quadrants and calculates the node's attributes (except its children)
         for body in contained_bodies:
             node.max_radius = max(node.max_radius, body.radius)
-            node.total_mass += body.mass
             node.center_of_mass += body.mass*body.position
+            node.total_mass += body.mass
             
             # This next block finds the quadrant this body is in and
             # assigns it to the respective list in quadrant_bodies
                     
             if body.position.y_component >= node.center.y_component:
-                # This body is in the top part of the square
-                # Now we compare x coordinates to see if it's i
-                # in the left or right part of the top part
+                # This body is in the top part of the square. Now we compare x coordinate to
+                # see if it's in the left or right part of the square
                 if body.position.x_component <= node.center.x_component:
                     quadrant_bodies[0].append(body)
                 else:
                     quadrant_bodies[1].append(body)
             # Otherwise it's in the bottom part of the square
-            # Again we compare x coordinates to check for left or right
+            # Again we compare x coordinates to check if it's in the left or right part
             elif body.position.x_component <= node.center.x_component:
                 quadrant_bodies[2].append(body)
             else:
                 quadrant_bodies[3].append(body)
                     
-        if node.num_contained_bodies != 0:
+        if node.total_mass != 0:
             node.center_of_mass /= node.total_mass
-        
+                    
         # Next, this block construct this node's children recursively. 
         # A node only has children if it contains more than 1 body.
         if node.num_contained_bodies > 1:
             # In order, this list stores the centers for the top left, top 
             # right, bottom left and bottom right quadrants respectively
-            quadrant_centers = [
+            quadrant_centers = (
                 node.center + Vector(-node.width/4, node.width/4), 
                 node.center + Vector(node.width/4, node.width/4), 
                 node.center + Vector(-node.width/4, -node.width/4), 
-                node.center + Vector(node.width/4, -node.width/4)]
+                node.center + Vector(node.width/4, -node.width/4))
                         
             # This loop recursively calls build_node to create this node's children
             for i in range(4):
-                node.children[i] = self.build_node(quadrant_bodies[i],  
+                node.children[i] = self.build_node(quadrant_bodies[i], 
                                                    quadrant_centers[i], 
                                                    node.width/2)
 
@@ -485,10 +484,10 @@ class BarnesHutTree:
     
 
 class Simulation:
-    """This class is responsible for acceleration calculation, moving each 
-    body and handling collisions. If there is a collision between bodies they 
-    are merged. The user may choose between the Direct Sum or Barnes-Hut 
-    algorithms for acceleration calculation and collision handling."""
+    """This class is responsible for acceleration calculation, moving each body and 
+    handling collisions. If there is a collision between bodies they are merged.
+    The user may choose between the Direct Sum or Barnes-Hut algorithms for acceleration
+    calculation and collision handling."""
     
     G = 6.6743e-11 # The constant used in Newton's law of gravitation
         
@@ -500,15 +499,15 @@ class Simulation:
         # adding or removing bodies from the simulation
         self.contained_bodies: dict[str, Body] = {}
 
-        self.time_step = 1 # The parameter used for the Euler method
-        self.time_elapsed = 0
+        self.time_step = 1 # The parameter used for the Euler method 
+        self.time_elapsed = 0 # This is the total time that has passed in the simulation
         
-        # The parameter for the Barnes-Hut algorithm. Higher values mean
-        # a less accuracate but faster simulation. The opposite is also true.
+        # The parameter for the Barnes-Hut algorithm. Higher values 
+        # mean a less accuracate but faster simulation. The opposite is also true.
         self.theta = 0.5
         
-        # The parameter for the smoothening technique. Higher values mean a 
-        # larger tolerance to acceleration values spiking but less accuracy.
+        # The parameter for the smoothening technique. Higher values 
+        # mean larger tolerance to acceleration values spiking but less accuracy.
         self.epsilon = 0
         
         self.barnes_hut_tree = BarnesHutTree([])
@@ -539,26 +538,26 @@ class Simulation:
             elif attribute_name == "kinetic_energy":
                 total += body.kinetic_energy
             else: # Otherwise, we are summing a vector property
-                # In this case, we first sum the vector and then get
-                # its desired attribute at the end (see line 544)
-                vector_name, vector_attribute = attribute_name.split(".")
+                # In this case, we first sum each vector into a total vector and
+                # then get the total vector's desired attribute (see line 551)
+                vector_name, desired_vector_attribute = attribute_name.split(".")
                 total += getattr(body, vector_name)
                 
-        if isinstance(total, Vector):
-            return getattr(total, vector_attribute)
+        if isinstance(total, Vector): # Checks if total is a Vector
+            return getattr(total, desired_vector_attribute)
         else:
             return total
                 
         
     def find_unique_id(self) -> str:
-        """This function returns a unique id not already in use. It returns a 
-        string "n", where n is the smallest integer >= 0 such that the id "n" 
+        """This function returns a unique id not already in use by any existing bodies. 
+        It returns a string "n", where n is the smallest integer >= 0 such that the id "n" 
         does not already exist."""
         
-        id_number = 0 # Represents the letter n explained in the docstring
+        id_number = 0 # Represents the letter n explained in the docstring above
         
-        # This loop keeps incrementing id number until the id "<id_number>" 
-        # does not already exist in the simulation
+        # This loop keeps incrementing id number until the id 
+        # "<id_number>" does not already exist in the simulation
         while str(id_number) in self.contained_bodies:
             id_number += 1
             
@@ -566,11 +565,11 @@ class Simulation:
         
         
     def have_bodies_collided(self, body_1: Body, body_2: Body) -> bool:
-        """This function returns True or False based on if two bodies have 
-        collided. This also checks if they have collided inter-frame."""
+        """This function returns True or False based on if two bodies have collided.
+        This also checks if they have collided inter-frame."""
                 
         # a, b and c are the coefficients of the quadratic equation used to 
-        # check for inter-frame collisions, shown in section 1.3.6.2
+        # check for inter-frame collisions
         collided_inter_frame = False
         a = (body_1.velocity - body_2.velocity).magnitude**2
         b = 2*((body_1.position-body_2.position)*(body_1.velocity-body_2.velocity))
@@ -587,11 +586,13 @@ class Simulation:
             lesser_root = min(root_1, root_2)
             larger_root = max(root_1, root_2)
             
-            # We now check if the time step parameter is between lesser_root 
-            # and larger_root. If so, the bodies have collided inter-frame.
+            # We now check if the time step parameter is between lesser_root and larger_root.
+            # If so, the bodies have collided inter-frame.
             if lesser_root <= self.time_step <= larger_root:
                 collided_inter_frame = True
         
+        # The other condition to see if the bodies have collided is if they are inside each
+        # other, meaning that the distance between them is less than the sum of their radii.
         distance_between_bodies = (body_2.position - body_1.position).magnitude
         if distance_between_bodies < body_1.radius+body_2.radius or collided_inter_frame:
             return True
@@ -600,8 +601,8 @@ class Simulation:
         
         
     def merge_bodies(self, body_1: Body, body_2: Body) -> Body:
-        """This function takes two bodies, removes them and merges them 
-        while conserving various properties. Then it adds the merged body."""
+        """This function takes two bodies, removes them and merges them while conserving
+        various properties. The merged body is then added to the simulation."""
         
         merged_body_id = self.find_unique_id()
         merged_body_mass = body_1.mass+body_2.mass # This conserves mass
@@ -610,8 +611,7 @@ class Simulation:
         merged_body_radius = math.sqrt(body_1.radius**2 + body_2.radius**2)
                 
         # This velocity of the merged body conserves momentum in the simulation
-        merged_body_velocity = (body_1.velocity*body_1.mass 
-                                + body_2.velocity*body_2.mass)/merged_body_mass
+        merged_body_velocity = (body_1.momentum + body_2.momentum)/merged_body_mass
         
         # The merged body's position is the center of mass of the two bodies
         merged_body_position = (body_1.position*body_1.mass 
@@ -633,19 +633,19 @@ class Simulation:
     def merge_bodies_in_same_location(self) -> None:
         """This function merges bodies with the same position, which is needed
         as building the Barnes-Hut quadtree will recurse infinitely if two 
-        bodies are in the same location."""
+        bodies are in the same location"""
         
         # This dictionary maps coordinates to a body
         # It is used to quickly check if two bodies are in the same location
         location_dictionary: dict[tuple[int|float, int|float], Body] = {}
         
-        contained_bodies_list = list(self.contained_bodies.values())
-        for body in contained_bodies_list:
+        contained_bodies_tup = tuple(self.contained_bodies.values())
+        for body in contained_bodies_tup:
             if body.position.components in location_dictionary:
-                # There are two bodies with the same location so we merge them
+                # There are two bodies with the same coordinates so we merge them
                 other_body = location_dictionary[body.position.components]
                 merged_body = self.merge_bodies(body, other_body)
-                # We now replace the body stored at the coordinates
+                # We now replace the body stored at those coordinates
                 # in the dictionary with the merged body
                 location_dictionary[body.position.components] = merged_body
             else:
@@ -657,30 +657,30 @@ class Simulation:
         This means repeatedly checking for collisions between every pair of bodies."""
                     
         merge_occured = True
-        while merge_occured: # The process is repeated until no merges happen
-            contained_bodies_list = list(self.contained_bodies.values())
+        while merge_occured: # The merging process is repeated until no merges happen
+            contained_bodies_tup = tuple(self.contained_bodies.values())
             removed_bodies: set[Body] = set()
             merge_occured = False
             
             # Iterate over every pair of bodies and check for a collision
-            for i in range(len(contained_bodies_list)):
-                body_1 = contained_bodies_list[i]
+            for i in range(len(contained_bodies_tup)):
+                body_1 = contained_bodies_tup[i]
                 if body_1 in removed_bodies: continue # We skip over removed bodies
                 
-                for j in range(i+1, len(contained_bodies_list)):
-                    body_2 = contained_bodies_list[j]
+                for j in range(i+1, len(contained_bodies_tup)):
+                    body_2 = contained_bodies_tup[j]
                     if body_2 in removed_bodies: continue
                     elif self.have_bodies_collided(body_1, body_2):
                         merge_occured = True
                         removed_bodies.add(body_1)
-                        removed_bodies.add(body_2)  
+                        removed_bodies.add(body_2)
+                        # body_1 is replaced with the merged body of body 1 and body 2
                         body_1 = self.merge_bodies(body_1, body_2)
 
 
     def optimized_direct_sum_collision_handling(self) -> None:
         """This function is an optimized version of direct_sum_collision_handling,
-        but with the same O(n²) time complexity. Read section 1.3.7.2 for an 
-        explanation of why this version is optimized."""
+        but with the same O(n²) time complexity"""
         
         bodies_to_check = list(self.contained_bodies.values())
         
@@ -688,19 +688,20 @@ class Simulation:
             body_1 = bodies_to_check.pop()
             merge_occured = False
             
-            # Iterate over the elements of the bodies to check
-            # We don't use a for loop since we may delete a body at some point
+            # We iterate over the other elements of bodies_to_check and check for collisions
+            # with body_1. We don't use a for loop since we may delete a body at some point.
             index = 0
             while index < len(bodies_to_check):
                 body_2 = bodies_to_check[index]
                 
                 if self.have_bodies_collided(body_1, body_2):
                     merge_occured = True
+                    # body_1 is replaced with the merged body of body 1 and body 2
                     body_1 = self.merge_bodies(body_1, body_2)
                     del bodies_to_check[index] # We remove body_2 from the list
-                    index -= 1 # This changes the list's size so we decrement index
+                    index -= 1 # This removal changes the list's size so we decrement index
                 
-                index += 1 # Increment index to keep iterating through the list
+                index += 1 # We increment index to keep iterating through the list
                 
             # Finally, we only add the merged body back to the list if it has merged
             # with something, meaning we still need to check it for more collisions
@@ -709,21 +710,19 @@ class Simulation:
 
 
     def barnes_hut_collision_handling(self) -> None:
-        """This function merges bodies that have collided using the Barnes-Hut 
-        quadtree. For each body, it does this by excluding clusters of other 
-        bodies too far away to collide with that body (therefore speeding up 
-        the collision detection) and otherwise checking for collisions with 
-        other bodies (if they are close enough to collide)."""
+        """This function merges bodies that have collided using the Barnes-Hut quadtree.
+        For each body, it does this by excluding clusters of other bodies too far away to 
+        collide with that body (therefore speeding up the collision detection)."""
         
         merge_occured = True
         while merge_occured: # The process is repeated until no merges happen
             merge_occured = False
             removed_bodies: set[Body] = set()
             self.merge_bodies_in_same_location()
-            contained_bodies_list = list(self.contained_bodies.values())
-            self.barnes_hut_tree = BarnesHutTree(contained_bodies_list)
+            contained_bodies_tup = tuple(self.contained_bodies.values())
+            self.barnes_hut_tree = BarnesHutTree(contained_bodies_tup)
 
-            for body in contained_bodies_list:
+            for body in contained_bodies_tup:
                 if body in removed_bodies: continue # We skip over removed bodies
                 
                 # We now perform a depth-first search of the quadtree using a stack
@@ -731,9 +730,9 @@ class Simulation:
                 while stack:
                     node = stack.pop()
                     
-                    # Checks if the node's square contains only one body 
-                    # (which is not body and has not been removed)
-                    # If so we check for a collision between body and that body
+                    # Checks if the node's square contains only one body, which 
+                    # we have collided with, is not the body for which we 
+                    # are checking for collisions, and has not been removed.
                     if (node.num_contained_bodies == 1 
                         and (other_body := node.contained_bodies[0]) != body 
                         and other_body not in removed_bodies
@@ -766,38 +765,37 @@ class Simulation:
         attraction between each pair of bodies, resolving it into acceleration 
         vectors and adding them to the acceleration of each body."""
                 
-        contained_bodies_list = list(self.contained_bodies.values())
+        contained_bodies_tup = tuple(self.contained_bodies.values())
                 
         # A body's acceleration is replaced when it is calculated
         # Therefore we start by setting the acceleration of all bodies to 0
-        for body in contained_bodies_list:
+        for body in contained_bodies_tup:
             body.acceleration = Vector(0, 0)
 
         # This nested loop iterates through each pair of bodies
         for i in range(len(self.contained_bodies)):
-            body_1 = contained_bodies_list[i]
+            body_1 = contained_bodies_tup[i]
             for j in range(i+1, len(self.contained_bodies)):
-                body_2 = contained_bodies_list[j]
+                body_2 = contained_bodies_tup[j]
                 
                 # We now find the acceleration vectors due to the 
-                # gravitational attraction between the bodies on each body
+                # gravitational attraction between body_1 and body_2 on each body
                 
                 # We now find the softened displacement vectors and distance
-                # between this pair of bodies.
+                # between this pair of bodies
                 displacement_vector_1 = body_2.position - body_1.position
                 displacement_vector_1.soften(self.epsilon)
                 displacement_vector_2 = -displacement_vector_1
                 softened_distance = displacement_vector_1.magnitude
                             
-                # The magnitude of the acceleration due to gravity on each 
-                # body is found using Newton's second law (a = F/m), Newton's 
-                # law of gravitation and softening
+                # The magnitude of the acceleration due to gravity on each body 
+                # is found using Newton's second law (a = F/m), Newton's law 
+                # of gravitation and softening.
                 acceleration_magnitude_1 = self.G*body_2.mass/softened_distance**2
                 acceleration_magnitude_2 = self.G*body_1.mass/softened_distance**2
                 
-                # The acceleration vectors due to gravity point from one body 
-                # to another, so their directions are the same as the 
-                # displacement vectors
+                # The acceleration vectors due to gravity point from one body to another, 
+                # so their directions are the same as the displacement vectors
                 acceleration_1 = Vector(
                     magnitude = acceleration_magnitude_1,
                     direction = displacement_vector_1.direction)
@@ -810,19 +808,18 @@ class Simulation:
     
 
     def barnes_hut_acceleration_calculation(self) -> None:
-        """This function uses the Barnes-Hut algorithm to find the approximate
-        acceleration on each body. It approximates because the acceleration of 
-        a body towards a group of distant bodies is found by treating the 
-        group as a point mass and using its center of mass and total mass 
-        as if it was a single body."""
+        """This function uses the Barnes-Hut algorithm to find the approximate acceleration
+        on each body. It approximates because the acceleration of a body towards a group 
+        of distant bodies is found by treating the group as a point mass and using its 
+        center of mass and total mass as if it was a single body."""
         
         self.merge_bodies_in_same_location()
-        contained_bodies_list = list(self.contained_bodies.values())
-        self.barnes_hut_tree = BarnesHutTree(contained_bodies_list)
+        contained_bodies_tup = tuple(self.contained_bodies.values())
+        self.barnes_hut_tree = BarnesHutTree(contained_bodies_tup)
         
         for body in self.contained_bodies.values():
-            # A body's acceleration is replaced each time it is calculated, so 
-            # at first we set it to zero
+            # A body's acceleration is replaced each time it is calculated
+            # Therefore at first we set it to zero
             body.acceleration = Vector(0, 0)
             
             # We now traverse the quadtree in a depth-first search using a stack
@@ -836,12 +833,11 @@ class Simulation:
                 displacement_vector.soften(self.epsilon)
                 softened_dist = displacement_vector.magnitude
                 
-                # If the square's width divided by the distance is less than theta
-                # it is considered far away, so its effect on the body will be
-                # approximated by treating the bodies in the square as a single
-                # body (using the center of mass and total mass of the bodies).
-                # We also do this if it contains only 1 body, 
-                # assuming we are not iterating over that body.
+                # If the square's width divided by the distance is less than theta it is
+                # considered far away. In this case, its effect on 
+                # the body will be approximated by treating the bodies in this node's square 
+                # as a single body (using the center of mass and total mass of the bodies).
+                # We also do this if it contains only 1 body (if that body != this body)
                 
                 is_far_away = softened_dist != 0 and node.width/softened_dist < self.theta
                 contains_one_body = (node.num_contained_bodies == 1)
@@ -851,13 +847,13 @@ class Simulation:
                 if ((is_far_away or contains_one_body) 
                     and not (contains_one_body and contained_body == body)):
                     
-                    # The approximated magnitude of the acceleration due to 
-                    # gravity on the body due to the bodies in the node's square
+                    # The approximated magnitude of the acceleration due to gravity on
+                    # the body due to the bodies in the node's square
                     acceleration_magnitude = self.G*node.total_mass/softened_dist**2
                     
-                    # The direction of the acceleration vector is the same as 
-                    # the direction of the displacement vector since the body 
-                    # is attracted towards the node's center of mass
+                    # The direction of the acceleration vector is the same as the direction
+                    # of the displacement vector since the body is attracted towards the
+                    # node's square's center of mass
                     acceleration_on_body = Vector(
                         magnitude = acceleration_magnitude, 
                         direction = displacement_vector.direction)
@@ -865,14 +861,13 @@ class Simulation:
                     body.acceleration += acceleration_on_body 
                     
                 # Otherwise this node's children (if any) are pushed to the stack
-                elif node.num_contained_bodies > 1:
+                elif node.num_contained_bodies > 1: # A node has children if this is true
                     for child in node.children:
                         stack.append(child)
         
 
     def step_euler(self) -> None:
-        """This function steps each body in the 
-        simulation using the Euler method."""
+        """This function steps each body in the simulation using the Euler method."""
         
         self.time_elapsed += self.time_step
         for body in self.contained_bodies.values():
@@ -880,9 +875,9 @@ class Simulation:
 
 
     def step(self) -> None:
-        """This function combines acceleration calculation, collision 
-        detection and the Euler method to step the simulation forward one 
-        frame (i.e. it gets the next "snapshot" of the simulation in time)."""
+        """This function combines acceleration calculation, collision detection and the 
+        Euler method to step the simulation forward one frame. Another way of thinking about 
+        this is that it gets the next "snapshot" of the simulation in time."""
         
         # Executes the collision detection algorithm chosen by the user
         match self.collision_detection:
@@ -907,8 +902,7 @@ class Simulation:
 
 
     def add_body(self, mass: int|float, radius: int|float, position: Vector) -> Body:
-        """This function is used to add a body to the simulation.
-        The new body is returned for use in the PygameWindow class."""
+        """This function is used to add a body to the simulation, which is then returned."""
         
         new_body = Body(self.find_unique_id(), mass, radius, position)
         self.contained_bodies[new_body.id] = new_body
@@ -917,9 +911,8 @@ class Simulation:
 
     @property
     def center_of_mass(self) -> Body:
-        """This function returns the center of mass of the simulation as a 
-        Body object. This is used to set the centered object of the simulation
-        to this body when selected."""
+        """This function returns the center of mass of the simulation as a Body object.
+        This is used to set the centered body of the simulation to this body if chosen."""
         
         center_of_mass = Vector(0, 0)
         total_mass = 0
@@ -951,7 +944,7 @@ class PygameWindow(Simulation):
             screen_information.current_w, 
             screen_information.current_h)
         
-        # Sets the pygame window to be fullscreen and scaled to the user's monitor
+        # This sets the pygame window to be fullscreen and scaled to the user's monitor size
         # self.pygame_screen is a pygame Surface object onto which we draw everything
         self.pygame_screen = pygame.display.set_mode(
             self.window_dimensions.components, 
@@ -959,31 +952,27 @@ class PygameWindow(Simulation):
         
         # This next block initializes all the attributes of this class
         
-        self.clock = pygame.time.Clock()
+        self.clock = pygame.time.Clock() # Used to control the frame rate of the simulation
         self.grid_square_length: int = 30 # Small grid square length in pixels
         self.zoom_factor = 1 # How zoomed in/out the grid is
         self.centered_body = Body("Origin", 0, 0, Vector(0, 0))
-        self.frames_per_second = 60 # The number of simulation steps per second
-        self.is_mouse_held = False # Is the left mouse button held down or not
+        self.frames_per_second = 60 # a.k.a the number of simulation steps per second
+        self.is_mouse_held = False # Is the left mouse button held down or not?
         self.selected_body: Body|None = None
         self.is_simulation_paused = True
         
-        # The lengths of vector arrows drawn are multiplied by this value
+        # The lengths of vector arrows drawn onto the screen are multiplied by this value
         self.arrow_length_factor = 1
         
-        # The offset due to the user dragging the grid around
-        self.grid_offset = Vector(0, 0)
+        self.grid_offset = Vector(0, 0) # The offset due to the user dragging the grid around
+        self.adding_body_mode = False # If True, the user can click on screen to add a body
         
-        # If True, the user can click on the screen to add a body
-        self.adding_body_mode = False
-        
-        # These two attributes store input from the orbit generation window
+        # These attributes store input from the orbit generation window
         self.body_to_orbit_around: Body|None = None
         self.semi_major_axis_length = 0
         
-        # A trail is shown tracing the movements of the selected body if 
-        # self.show_trail is True. trail_points stores the previous positions 
-        # of the selected and centered body in order to draw the trail.
+        # A trail is shown tracing the movement of the selected body if show_trail is True
+        # trail_points stores the previous positions of the selected body and centered body
         self.show_trail = False
         self.trail_points: list[tuple[Vector, Vector]] = [] 
         
@@ -995,14 +984,15 @@ class PygameWindow(Simulation):
         """This function either translates simulation coordinates TO pygame 
         coordinates or gets simulation coordinates FROM pygame coordinates"""
         
-        # The flipping of the y component is due to Pygame having a flipped y axis
-        # compared to our simulation. In Pygame, a higher y value means something is
-        # further down the screen, unlike in a normal coordinate system.
-        # Multipling by zoom_factor converts a length in meters to a length in pixels.
+        # The flipping of the y component (lines 1010 and 1014) is due to Pygame having a 
+        # flipped y axis compared to our simulation. In Pygame, a higher y value means 
+        # something is further down the screen, unlike our simulation coordinate system.
+        
+        # Multiplying by zoom_factor converts a length in meters to a length in pixels.
         
         if centering_offset is None:
             centering_offset = self.centered_body.position
-        total_pixel_offset = self.grid_offset+self.window_dimensions//2
+        total_pixel_offset = self.grid_offset + self.window_dimensions//2
         
         if mode == "to":
             coordinates -= centering_offset
@@ -1026,44 +1016,44 @@ class PygameWindow(Simulation):
         for event in pygame.event.get(): # Each event is a pygame event object
             if event.type == pygame.MOUSEWHEEL: # The user has used the scroll wheel
                 # In this case we change the zoom of the grid.
-                # event.y is positive or negative based on if the user has
-                # moved their scroll wheel up or down.
                 
+                # event.y changes sign (+, -) if the user moved their scroll wheel up or down
+                # event.y also becomes bigger the faster the user moves their scroll wheel
                 zoom_multiplier = 1+event.y/10
                 self.zoom_factor *= zoom_multiplier
                 self.grid_offset *= zoom_multiplier
+                self.grid_square_length *= zoom_multiplier
+                self.grid_square_length = int(self.grid_square_length) 
                 
-                # If the grid squares become too small or too large, then we
-                # reset them to the other end of the size spectrum
-                self.grid_square_length = int(self.grid_square_length*zoom_multiplier)
+                # If the grid squares become too small or too large, then 
+                # we reset them to the other end of the size spectrum
                 if self.grid_square_length < 10: self.grid_square_length = 30
                 elif self.grid_square_length > 30: self.grid_square_length = 10
                 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 # The user has clicked their left mouse button
+                
                 self.is_mouse_held = True
                 
                 # We convert the user's click position to simulation coordinates
                 mouse_position = Vector(*pygame.mouse.get_pos())
                 sim_coords = self.translate_coordinates(mouse_position, "from")
                 
-                # If self.adding_body_mode is True we add a body where the user 
-                # clicked. Otherwise, we check if they clicked on a body.
+                # If self.adding_body_mode is True, we add a body where the user clicked
+                # Otherwise, we check if they clicked on a body and select it if so
                 if self.adding_body_mode:
-                    new_body_mass = 10**14/self.zoom_factor**2
+                    new_body_mass = 10**14 / self.zoom_factor**2
                     new_body_radius = 20/self.zoom_factor
                     new_body = self.add_body(new_body_mass, new_body_radius, sim_coords)
-                    self.selected_body = new_body
+                    self.selected_body = new_body # The new body becomes the selected body
                     self.adding_body_mode = False
                 else:
                     for body in self.contained_bodies.values():
                         # We find distance between the click location and the body
                         distance = (sim_coords - body.position).magnitude
-        
-                        if distance < body.radius:
-                            # The user has clicked on this body. We change the selected 
-                            # body to what they selected and clear the trail points 
-                            # if it changed.
+                        
+                        if distance < body.radius: # If so, the user has clicked on this body
+                            # We clear trail points if we change the selected body
                             if body != self.selected_body:
                                 self.trail_points = []
                             self.selected_body = body
@@ -1089,7 +1079,6 @@ class PygameWindow(Simulation):
         # First we fill the screen with black
         self.pygame_screen.fill("black")
         
-        # Next, we draw everything onto the screen. 
         # Note the order: if we were to call draw_grid() after draw_bodies() 
         # then grid lines would be displayed on top of bodies
         self.draw_grid()
@@ -1098,40 +1087,39 @@ class PygameWindow(Simulation):
 
 
     def draw_grid(self) -> None:
-        """This function draws the grid onto the pygame screen. It also draws 
-        the grid indicator onto the screen, showing the size of a large grid 
-        square in various space units."""
+        """This function draws the grid onto the pygame screen.
+        It also draws the grid indicator onto the screen, showing the   
+        size of a large grid square in various space units."""
                 
-        # Draw the small and large grid squares. 
+        # We first draw the small and large grid squares. 
         # A large grid square contains a 5 by 5 square of small grid squares
         self.draw_grid_lines(self.grid_square_length, "#141414")
         self.draw_grid_lines(self.grid_square_length*5, "#444444")
             
-        # Draw the center grid lines representing the origin
+        # We now draw the center grid lines representing each coordinate axis
         total_offset = self.window_dimensions//2 + self.grid_offset
-        pygame.draw.line( # Draw the vertical line
+        pygame.draw.line( # Draw the vertical line representing the y axis
             self.pygame_screen, 
             "#BBBBBB",  
-            (total_offset.x_component, 0), 
+            (total_offset.x_component, 0),
             (total_offset.x_component, self.window_dimensions.y_component))
-        pygame.draw.line( # Draw the horizontal line
+        pygame.draw.line( # Draw the horizontal line representing the x axis
             self.pygame_screen, 
             "#BBBBBB", 
             (0, total_offset.y_component), 
             (self.window_dimensions.x_component, total_offset.y_component))
         
-        # Draw the space indicator showing the size of a large grid square
         self.draw_space_indicator()
 
 
     def draw_grid_lines(self, square_length: int, color: str) -> None:
-        """This function draws a set of horizontal and vertical lines forming 
-        a grid using the given parameters."""
+        """This function draws a set of horizontal and vertical 
+        lines forming a grid using the given parameters."""
         
         screen_width, screen_height = self.window_dimensions.components
 
-        # First we find the x and y coordinate of the first vertical and 
-        # horizontal grid lines respectively
+        # First we find the x and y coordinate of the first 
+        # vertical and horizontal grid lines respectively
         total_offset = self.window_dimensions//2 + self.grid_offset
         grid_start_point = total_offset % square_length
         first_x, first_y = map(int, grid_start_point.components)
@@ -1140,15 +1128,13 @@ class PygameWindow(Simulation):
         for x_coordinate in range(first_x, screen_width, square_length):
             start_coordinate = (x_coordinate, 0)
             end_coordinate = (x_coordinate, self.window_dimensions.y_component)
-            pygame.draw.line(self.pygame_screen, color, 
-                             start_coordinate, end_coordinate)
+            pygame.draw.line(self.pygame_screen, color, start_coordinate, end_coordinate)
     
         # Draw the horizontal lines at different y coordinates
         for y_coordinate in range(first_y, screen_height, square_length):
             start_coordinate = (0, y_coordinate)
             end_coordinate = (self.window_dimensions.x_component, y_coordinate)
-            pygame.draw.line(self.pygame_screen, color, 
-                             start_coordinate, end_coordinate)
+            pygame.draw.line(self.pygame_screen, color, start_coordinate, end_coordinate)
 
 
     def draw_space_indicator(self) -> None:
@@ -1158,11 +1144,11 @@ class PygameWindow(Simulation):
         
         square_length = self.grid_square_length*5
         
-        # First we find the (x, y) coordinates of the bottom right point of 
-        # the bottom-right most large grid square
+        # First we find the (x, y) coordinates of the bottom right 
+        # point of the bottom-right most large grid square
         total_offset = self.window_dimensions//2 + self.grid_offset
         grid_start_point = total_offset % square_length
-        top_left = (self.window_dimensions-grid_start_point)%square_length
+        top_left = (self.window_dimensions-grid_start_point) % square_length
         bottom_right = self.window_dimensions - top_left
         x, y = bottom_right.components
         
@@ -1174,34 +1160,38 @@ class PygameWindow(Simulation):
         
         pygame.draw.lines(self.pygame_screen, "white", False, vertices)
         
-        # Now we draw the font onto the space indicator, showing its size in 
-        # various space units in 3 decimal place standard form.
+        # Next we create the texts for the space indicator
+        
         font = pygame.font.Font(size=30)
-        square_length /= self.zoom_factor
+        square_length /= self.zoom_factor # Converts the square length to meters
         
-        # f"{x:.3e}" means displaying x in 3 decimal place standard form and 
-        # is used throughout this program
+        # f"{x:.3e}" means formatting x to 3 decimal place standard form
+        # This is used throughout the program to format things to 3 decimal places.
         texts_to_display = (
-            font.render(f"{square_length:.3e} m", 0, "grey"), 
-            font.render(f"{square_length/1000:.3e} km", 0, "grey"), 
-            font.render(f"{square_length/149597870700:.3e} AU", 0, "grey"), 
-            font.render(f"{square_length/299792458:.3e} Ls", 0, "grey"))
+            font.render(f"{square_length:.3e} m", True, "grey"), 
+            font.render(f"{square_length/1000:.3e} km", True, "grey"), 
+            font.render(f"{square_length/149597870700:.3e} AU", True, "grey"), 
+            font.render(f"{square_length/299792458:.3e} Ls", True, "grey"))
         
-        text_widths = (text.get_width() for text in texts_to_display)
+        square_length *= self.zoom_factor # Converting back to pixels
+        
+        # Finally we add our texts onto the screen.
+        
+        text_widths = [text.get_width() for text in texts_to_display]
         max_width = max(text_widths)
         
         for index, text in enumerate(texts_to_display):
-            text_coordinates = (
+            # y coordinate decreases with index, stacking the texts on top of each other
+            text_top_left_coordinates = (
                 x - max_width, 
-                y - (square_length*self.zoom_factor)//5 - 25*(index+1))
-            self.pygame_screen.blit(text, text_coordinates)
+                y - square_length//5 - 25*(index+1))
+            self.pygame_screen.blit(text, text_top_left_coordinates)
         
                 
     def draw_bodies(self) -> None:
-        """This function draws all the bodies in the simulation onto the 
-        screen. It also draws any extra parts of bodies like vector arrows 
-        drawn onto them, orbit previews, trail points or a preview of a body 
-        being added to the simulation.""" 
+        """This function draws all the bodies in the simulation onto the screen. 
+        It lso draws any extra parts of bodies (vector arrows drawn onto them, orbit 
+        previews, trail points or a preview of a body being added to the simulation.).""" 
         
         # Draw the bodies in the simulation onto the screen
         for body in self.contained_bodies.values():
@@ -1232,8 +1222,8 @@ class PygameWindow(Simulation):
                 self.draw_arrow_on_selected_body(
                     "green", self.selected_body.engine_acceleration.copy())
             
-        # Finally, the user will be shown a preview of the body they are
-        # adding on the screen if adding_body_mode is True
+        # Finally, the user will be shown a preview of the body 
+        # they are adding on the screen if adding_body_mode is True
         if self.adding_body_mode:
             pygame.draw.circle(self.pygame_screen, "blue", pygame.mouse.get_pos(), 20)
             
@@ -1244,54 +1234,52 @@ class PygameWindow(Simulation):
         if vector.magnitude == 0:
             return # If so we exit the function as the vector arrow will have no length
         else:
-            # Refer back to translate_coordinates for an explanation
+            # Refer back to translate_coordinates for an explanation of the next two lines
             vector.y_component *= -1
-            vector *= self.arrow_length_factor * self.zoom_factor
+            vector *= self.zoom_factor
+            vector *= self.arrow_length_factor
         
         pygame_coords = self.translate_coordinates(self.selected_body.position, "to")
-        arrow_tip_coordinates = pygame_coords+vector
-        selected_body_pixel_radius = self.selected_body.radius*self.zoom_factor
+        arrow_tip_coordinates = pygame_coords + vector
+        selected_body_pixel_radius = self.selected_body.radius * self.zoom_factor
 
         # Draw the stem of the arrow (i.e. the part without the arrowhead)
-        stem_width = math.ceil(1/2*selected_body_pixel_radius) 
+        stem_width = math.ceil(0.5*selected_body_pixel_radius) 
         pygame.draw.line(self.pygame_screen, color, pygame_coords.components,
                          arrow_tip_coordinates.components, stem_width)
         
         # Now we draw the arrowhead 
-        vector.magnitude = selected_body_pixel_radius
+        
+        vector.magnitude = selected_body_pixel_radius # = half the width of the arrowhead
         normal_vector = Vector(-vector.y_component, vector.x_component)
         
-        arrowhead_vertices = (
-            (arrow_tip_coordinates+normal_vector).components,
-            (arrow_tip_coordinates-normal_vector).components,
-            (arrow_tip_coordinates+vector).components)
+        arrowhead_vertices = ( # the vertices that form the arrowhead triangle
+            (arrow_tip_coordinates + normal_vector).components,
+            (arrow_tip_coordinates - normal_vector).components,
+            (arrow_tip_coordinates + vector).components)
         
         pygame.draw.polygon(self.pygame_screen, color, arrowhead_vertices)
 
 
     def draw_orbit_preview(self) -> None:
-        """This function draws an orbit preview for the selected body
-        if a user has inputted both a semi major axis length and a body to 
-        orbit around. This preview depends on the assumptions made in the 
-        equation for calculating a stable orbit (see section 1.3.3), so 
-        if any of these are broken this preview may not be accurate."""
+        """This function draws an orbit preview for the selected body if a user has inputted 
+        both a semi major axis length and a body to orbit around. This preview depends 
+        on the assumptions made in the equation for calculating a stable orbit, 
+        so if any of these are broken this preview may not be accurate."""
                     
-        # The distance between the body to orbit around and the selected body
-        displacement_vector = (self.body_to_orbit_around.position 
-                               - self.selected_body.position)
-        distance = displacement_vector.magnitude
+        displacement_vector = self.body_to_orbit_around.position-self.selected_body.position
+        distance = displacement_vector.magnitude # The distance between the two bodies
         
-        # If true then either the semi major axis length is too small or too 
-        # large, so we do not draw a preview.
+        # If true then either the semi major axis length is too small or too large
         if not distance/2 <= self.semi_major_axis_length <= distance*5:
-            return
+            return # Therefore we exit the function and do not draw the preview
             
         ellipse_length = 2*self.semi_major_axis_length
         ellipse_width = 2*math.sqrt(distance*(ellipse_length-distance))
         ellipse_dimensions = Vector(ellipse_length, ellipse_width)
         ellipse_dimensions *= self.zoom_factor # Convert from meters to pixels
         
-        # Now we create and rotate the ellipse
+        # Now we create and rotate the ellipse.SRCALPHA makes its background transparent
         ellipse_surface = pygame.Surface(ellipse_dimensions.components, pygame.SRCALPHA)
         pygame.draw.ellipse(ellipse_surface, "green", ellipse_surface.get_rect(), 5)
         rotation_angle = math.degrees(displacement_vector.direction)
@@ -1300,7 +1288,7 @@ class PygameWindow(Simulation):
         # The dimensions of the smallest rectangle containing the ellipse
         bounding_box = Vector(*ellipse_surface.get_rect().size)
         
-        # We now find the pygame coordinates of the top left of the ellipse
+        # We now find the pygame coordinates of the top left corner of the ellipse's box
         displacement_vector.magnitude = self.semi_major_axis_length
         ellipse_center = self.selected_body.position + displacement_vector 
         pygame_center = self.translate_coordinates(ellipse_center, "to")
@@ -1310,8 +1298,7 @@ class PygameWindow(Simulation):
                 
     
     def draw_trail_points(self) -> None:
-        # We now process self.trail_points into a list of tuples of 
-        # coordinates to draw lines through
+        # We now process self.trail_points into a list of tuples of coordinates to draw
         drawn_points: list[tuple[int, int]] = []
         
         for past_position, centering_offset in self.trail_points:
@@ -1326,11 +1313,11 @@ class PygameWindow(Simulation):
                 
                 
     def draw_extra(self) -> None:
-        """This function draws miscellaneous items onto the pygame window, 
-        namely the paused icon and the fps counter."""
+        """This function draws miscellaneous items onto the pygame 
+        window, namely the paused icon and the fps counter."""
         
-        # If the simulation is paused we will display a paused icon on the 
-        # screen so the user knows the simulation is paused
+        # If the simulation is paused we will display a paused icon 
+        # on the screen so the user knows the simulation is paused
         if self.is_simulation_paused:
             pygame.draw.rect(self.pygame_screen, "grey", (50, 50, 40, 150))
             pygame.draw.rect(self.pygame_screen, "grey", (125, 50, 40, 150))
@@ -1342,10 +1329,10 @@ class PygameWindow(Simulation):
         
         try:
             text = font.render(f"{int(self.clock.get_fps())} FPS", 0, "grey")
-        except OverflowError: # An fps too high will trigger an overflow error
+        except OverflowError: # A very high FPS will trigger an overflow error
             text = font.render(f"Extremely high FPS", 0, "grey")
         text_width = text.get_width()
-        text_coordinates = (self.window_dimensions.x_component-30-text_width, 50)
+        text_coordinates = (self.window_dimensions.x_component-text_width-30, 50)
         self.pygame_screen.blit(text, text_coordinates)
                         
                 
@@ -1369,7 +1356,7 @@ class PygameWindow(Simulation):
                 if self.centered_body.id == "Center of mass":
                     self.centered_body = self.center_of_mass
                   
-            # We now wait a bit of time to ensure a constant frame rate
+            # We now wait a bit of time to ensure a constant maximum frame rate
             self.clock.tick(self.frames_per_second)
             
             
@@ -1383,7 +1370,7 @@ class PygameWindow(Simulation):
         # body to the origin and modify the grid offset so the user is still
         # looking at the same simulation coordinates after the centering change
         if self.centered_body == self.selected_body: 
-            self.grid_offset = -self.centered_body.position*self.zoom_factor
+            self.grid_offset = -self.centered_body.position * self.zoom_factor
             self.grid_offset.y_component *= -1
             self.centered_body = Body("Origin", 0, 0, Vector(0, 0))
             
@@ -1391,14 +1378,12 @@ class PygameWindow(Simulation):
 
 
     def generate_stable_orbit(self) -> None:
-        """This function generates a stable orbit velocity for the selected 
-        body around the body to orbit around at the semi major axis length 
-        specified. This uses the Vis Viva equation and the assumptions that 
-        come with it."""
+        """This function generates a stable orbit velocity for the selected body around 
+        the body to orbit around at the semi major axis length specified. This uses the 
+        Vis Viva equation and the assumptions that come with it."""
         
         # First we find the distance between the centers of the two bodies
-        displacement_vector = (self.body_to_orbit_around.position 
-                                - self.selected_body.position)
+        displacement_vector = self.body_to_orbit_around.position-self.selected_body.position
         distance = displacement_vector.magnitude
             
         # We now find the magnitude and direction of the selected body's 
@@ -1413,36 +1398,32 @@ class PygameWindow(Simulation):
 
 
 class UserInterface(PygameWindow):
-    """This class is responsible for the user interface window. 
-    Here the user can view, modify and graph various simulation parameters, 
-    along with generating stable orbits and reading a user manual."""
+    """This class is responsible for the user interface window. Here the user can view, 
+    modify and graph various simulation parameters, along with generating stable orbits 
+    and reading a user manual."""
     
     BODY_ATTRIBUTES = set(( # A set of all body attributes
-        "id", "is_immobile", "position.x_component", 
-        "position.y_component", "mass", "radius",
-        "velocity.direction", "velocity.magnitude", 
-        "velocity.x_component", "velocity.y_component", 
-        "acceleration.direction", "acceleration.magnitude",
-        "acceleration.x_component", "angular_momentum", 
-        "acceleration.y_component", "engine_acceleration.direction", 
-        "engine_acceleration.magnitude", "angular_velocity", 
-        "engine_acceleration.x_component", "kinetic_energy",
-        "engine_acceleration.y_component", "momentum.magnitude", 
-        "momentum.x_component", "momentum.y_component"))
+        "id", "is_immobile", "position.x_component", "position.y_component", 
+        "angular_velocity", "velocity.direction", "velocity.magnitude", "angular_momentum", 
+        "velocity.y_component", "acceleration.direction", "acceleration.magnitude",
+        "acceleration.x_component", "acceleration.y_component", "velocity.x_component", 
+        "engine_acceleration.direction", "engine_acceleration.magnitude", "kinetic_energy", 
+        "engine_acceleration.x_component", "engine_acceleration.y_component", "mass", 
+        "momentum.magnitude", "momentum.x_component", "momentum.y_component", "radius"))
     
     
     def __init__(self) -> None:
         super().__init__() # Initializes the parent PygameWindow class
         
-        # self.main_window is the base user interface window on which all 
-        # other widgets are added
+        # self.main_window is the base user interface 
+        # window onto which all other widgets are added
         self.main_window = tkinter.Tk()
         self.main_window.title("User interface")
         
-        # This makes the user interface window appear on top of other ones
+        # This puts the user interface window above other windows (i.e. keeps it on top)
         self.main_window.attributes("-topmost", True)
         
-        # This exits the program when the user clicks the X button on the user interface
+        # This exits the program when the user clicks the X button on the top of the window
         self.main_window.protocol("WM_DELETE_WINDOW", lambda: os.kill(os.getpid(), 9))
         
         self.main_window.resizable(False, False) # Resizing the window is disabled
@@ -1457,16 +1438,16 @@ class UserInterface(PygameWindow):
         self.stringvars: dict[str, StringVar] = {}
         
         # This maps names of dropdown menus to their tkinter Combobox widget
-        # A combobox widget is the widget for a dropdown menu
+        # A combobox widget is the widget used to create a dropdown menu
         self.dropdown_menus: dict[str, Combobox] = {}
         
-        # This attribute contains lists of information about the graphed parameter
-        # for each graph in the graphs window. Each list contains, in order:
+        # This attribute contains lists of information about each graph in the graphs window
+        # Each list contains, in order:
         #   - The tkinter Canvas widget the graph is drawn on
         #   - The stringvar for the textbox showing the current value of the parameter
         #   - The stringvar for the textbox showing the time range of the graph
         #   - The time range value (how far back in time data points are shown for)
-        #   - A list of (x, y) tuples of data points that store data to graph
+        #   - A list of (x, y) tuples of data points drawn onto the graph
         #   - The name of the attribute being graphed
         self.graphs: list[list[Canvas, StringVar, StringVar, int, 
                                list[tuple[int, int]], str]] = []
@@ -1474,7 +1455,7 @@ class UserInterface(PygameWindow):
         self.construct_user_interface()
         
         # We now start the back end main loop in a separate thread and then 
-        # start the front end main loop. This is explained in section 2.2.3.
+        # start the front end main loop.
         back_end_thread = threading.Thread(target=self.back_end_main_loop)
         back_end_thread.start()
         self.front_end_main_loop() 
@@ -1482,10 +1463,10 @@ class UserInterface(PygameWindow):
         
     def construct_user_interface(self):
         """This function creates the window bar at the top of the user interface
-        and combines the _window functions to add every widget to it."""
+        and combines the _window methods to add every widget to it."""
         
         # A notebook is the widget you see at the top of the user interface window.
-        # It allows you to choose between various windows (e.g., the "Basic buttons" window). 
+        # It allows you to choose between various windows (e.g. the "Basic buttons" window)
         # (almost) each window is constructed by a _window function which returns
         # a widget containing all of the widgets for that window.
         main_notebook = Notebook(self.main_window)
@@ -1494,35 +1475,36 @@ class UserInterface(PygameWindow):
         # which is constructed using two _window functions
         selected_body_notebook = Notebook(main_notebook)
         selected_body_notebook.add(
-            self.selected_body_info_window(main_notebook), 
+            child=self.selected_body_info_window(main_notebook), 
             text="Attributes")
         selected_body_notebook.add(
-            self.orbit_generator_window(main_notebook),
+            child=self.orbit_generator_window(main_notebook),
             text="Stable orbit generator")
         
         # Finally, we add all of the windows to main_notebook
-        text_and_window: tuple[str, Frame|Notebook] = (
+        # text_and_window contains the title and widgets for each window in the interface
+        text_and_window: tuple[tuple[str, Frame|Notebook]] = (
             ("Basic buttons", self.buttons_window(main_notebook)),
             ("Simulation parameters", self.parameters_window(main_notebook)), 
             ("Selected body menu", selected_body_notebook),
             ("Graphs", self.graphs_window(main_notebook)),
             ("Manual", self.manual_window(main_notebook)))
         for name, widget in text_and_window:
-            main_notebook.add(child = widget, text = name)
+            main_notebook.add(child=widget, text=name)
         
-        # .pack() is one way of adding widgets to the screen, allowing you to 
-        # add widgets one after the other. The side parameter allows you to 
-        # choose which side of the screen you add the widget to
+        # .pack() is one way of adding widgets to the screen, allowing you to add 
+        # widgets one after the other. The side=... parameter allows you to choose which 
+        # side of the screen you add the widget to (by default this is the top)
         main_notebook.pack()
                     
                     
-    # These next _window functions return a widget containing all of the widgets
-    # for a window of the user interface. parent is the widget onto which this 
-    # window is drawn onto
+    # These next _window functions return a widget containing all of 
+    # the widgets for a window of the user interface. The parent 
+    # parameter is the widget onto which this window is drawn onto.
                         
     def buttons_window(self, parent: tkinter.Widget) -> Frame:
         """This function constructs a Frame object containing the "Basic 
-        buttons" section of the simulation interface and returns it"""
+        buttons" section of the simulation interface and returns it."""
         
         container = Frame(parent)
         
@@ -1539,27 +1521,30 @@ class UserInterface(PygameWindow):
             ("Un/show trail on selected body", lambda: invert_attr("show_trail")))
         
         for text, command in text_and_command:
-            Button(master=container, text=text, command=command).pack()
+            button_widget = Button(master=container, text=text, command=command)
+            button_widget.pack()
                 
         return container 
 
 
     def parameters_window(self, parent: tkinter.Widget) -> Frame:
         """This function constructs a Frame object containing the "Simulation 
-        parameters" section of the simulation interface and returns it"""
+        parameters" section of the simulation interface and returns it."""
         
         container = Frame(parent)
         
+        # The first part of the parameters window consists of textboxes
+        
         textbox_labels = (
             "Time elapsed (s): ", "Value of θ (>= 0): ", "Value of ε (su, >= 0): ",
-            "Time step (> 0): ","Arrow length factor (>= 0): ", "Frames per second (> 0): ")
+            "Time step (> 0): ", "Arrow length factor (>= 0): ", "Frames per second (> 0): ")
         
         # This for loops adds the textboxes to this window
         for index, label in enumerate(textbox_labels):
             attribute_name = self.label_to_attribute_name(label)
             attribute_value = getattr(self, attribute_name)
             
-            label = Label(container, text=label)
+            label = Label(container, text=label) # A label widget displays plain text
             
             # .grid() is a way of adding widgets in a row-column format
             # sticky="w" means that the widget starts on the left side of its row
@@ -1575,17 +1560,20 @@ class UserInterface(PygameWindow):
             if attribute_name == "time_elapsed":
                 textbox.configure(state="readonly")
                 
-            # Textbox bindings perform a command when an event happens with a widget
+            # Widget bindings perform a command when an event happens with a widget
             # <Return> means the enter button was clicked. 
+            # <Key> means a key was pressed in an entry widget
             # <FocusOut> means the user clicked away from that widget.
             # <ButtonPress-1> means that widget was clicked with the left mouse button
             # <<ComboboxSelected>> means a dropdown menu option was clicked
             # <<TreeviewSelected>> means a treeview option was clicked (see manual window)
             # The event paramter is automatically provided by Tkinter
-            textbox.bind("<Return>", 
+            
+            textbox.bind("<Return>", # When the user presses enter their input is processed
                          lambda event, attr=attribute_name: self.process_input(attr))
             
             def focus_out_command(event, attr=attribute_name):
+                # When the user clicks away from a textbox the displayed value resets
                 attribute_value = getattr(self, attr)
                 translated_value = self.translate_space_units(attribute_value, attr, "to")
                 self.stringvars[attr].set(f"{translated_value:.3e}")
@@ -1594,6 +1582,7 @@ class UserInterface(PygameWindow):
             # <widget>.winfo_reqwidth gets the width in pixels of <widget>
             textbox.grid(row=index, sticky="w", padx=(label.winfo_reqwidth(), 0))
             
+        # The second part of the parameters window consists of dropdown menus.
             
         # This is a tuple of tuples providing information about the parameters displayed
         # using dropdown menus. It contains the label text and dropdown options.
@@ -1619,14 +1608,14 @@ class UserInterface(PygameWindow):
             dropdown_menu = Combobox(container, width=20, values=dropdown_options, 
                                      state="readonly", textvariable=dropdown_stringvar)
 
-            dropdown_menu.current(0)
+            dropdown_menu.current(0) # Sets the currently selected option to the first one
             
             # Next we find the right <<ComboboxSelected>> command for this dropdown
-            if index == 0: # If so we find the command for the centeered body dropdown
+            if index == 0: # If so, we are finding the command for the centered body dropdown
                 self.dropdown_menus["centered_body"] = dropdown_menu
-                command = lambda event: self.process_input("centered_body")
+                selected_command = lambda event: self.process_input("centered_body")
             else:
-                def command(event: tkinter.Event, attribute=attribute_name):
+                def selected_command(event: tkinter.Event, attribute=attribute_name):
                     selected_value = event.widget.get()
                     setattr(self, attribute, selected_value)
                     
@@ -1634,12 +1623,11 @@ class UserInterface(PygameWindow):
                     # and "epsilon" attributes since they don't update automatically
                     for attr in ("semi_major_axis_length", "epsilon"):
                         attribute_value = getattr(self, attr)
-                        translated_value = self.translate_space_units(attribute_value,
-                                                                      attr, 
-                                                                      "to")
+                        translated_value = self.translate_space_units(
+                            attribute_value, attr, "to")
                         self.stringvars[attr].set(f"{translated_value:.3e}")
                 
-            dropdown_menu.bind("<<ComboboxSelected>>", command)
+            dropdown_menu.bind("<<ComboboxSelected>>", selected_command)
 
             dropdown_menu.grid(row=index+len(textbox_labels), sticky="w", 
                                padx=(label.winfo_reqwidth(), 0))
@@ -1650,40 +1638,39 @@ class UserInterface(PygameWindow):
     def selected_body_info_window(self, parent: tkinter.Widget) -> Frame:
         """This function constructs a Frame object containing the "Attributes"
         part of the "Selected body menu" section of the simulation interface 
-        and returns it"""
+        and returns it."""
         
         container = Frame(parent)
             
         scrollbar, canvas, frame = self.scrollable_frame(container, 375, 400)
         
         ATTRIBUTE_LABELS = (
-            "id: ", "is immobile?: ", "x coordinate (su): ", 
-            "y coordinate (su): ", "mass (kg, >= 0): ", "radius (su, > 0): ", 
-            "velocity direction (rad): ", 
+            "id: ", "is immobile?: ", "x coordinate (su): ", "y coordinate (su): ", 
+            "mass (kg, >= 0): ", "radius (su, > 0): ", "velocity direction (rad): ", 
             "velocity magnitude (su s⁻¹, >= 0): ", "x velocity (su s⁻¹): ", 
             "y velocity (su s⁻¹): ", "acceleration direction (rad): ",
-            "acceleration magnitude (su s⁻², >= 0): ", 
-            "x acceleration (su s⁻²): ", "y acceleration (su s⁻²): ", 
-            "engine acceleration direction (rad): ", 
+            "acceleration magnitude (su s⁻², >= 0): ", "x acceleration (su s⁻²): ", 
+            "y acceleration (su s⁻²): ", "engine acceleration direction (rad): ", 
             "engine acceleration magnitude (su s⁻², >= 0): ", 
-            "engine x acceleration (su s⁻²): ", 
-            "engine y acceleration (su s⁻²): ", 
+            "engine x acceleration (su s⁻²): ", "engine y acceleration (su s⁻²): ", 
             "x momentum (kg su s⁻¹): ", "y momentum (kg su s⁻¹): ", 
-            "momentum magnitude (kg su s⁻¹, >= 0): ", 
-            "kinetic energy (kg su² s⁻², >= 0): ", 
+            "momentum magnitude (kg su s⁻¹, >= 0): ", "kinetic energy (kg su² s⁻², >= 0): ", 
             "angular velocity (rad s⁻¹): ", "angular momentum (kg su² s⁻¹): ")
                 
         for index, attribute_label in enumerate(ATTRIBUTE_LABELS):
             attribute_name = self.label_to_attribute_name(attribute_label)
             
+            # First we display label text for this attribute
             label = Label(frame, text=attribute_label)
             label.grid(row=index+1, sticky="w")
             
+            # Then we create the textbox for it
             textbox_stringvar = StringVar(self.main_window, "-")
             self.stringvars[attribute_name] = textbox_stringvar
             textbox = Entry(frame, relief="solid", width=20, 
                             textvariable=textbox_stringvar)
 
+            # If the attribute is non-editable, the textbox is made read only
             NON_EDITABLE_ATTRIBUTES = set((
                 "angular_velocity", "angular_momentum", "acceleration.magnitude", 
                 "acceleration.x_component", "acceleration.y_component", 
@@ -1691,9 +1678,12 @@ class UserInterface(PygameWindow):
             if attribute_name in NON_EDITABLE_ATTRIBUTES:
                 textbox.configure(state="readonly")
                 
-            # If the user clicks on a textbox the simulation pauses
+            # If the user clicks on a textbox or inputs values the simulation pauses
+            # This is to prevent their input from being cleared when attribute values update
             textbox.bind(
                 "<ButtonPress-1>", lambda event: setattr(self, "is_simulation_paused", True))
+            textbox.bind(
+                "<Key>", lambda event: setattr(self, "is_simulation_paused", True))
             
             textbox.bind(
                 "<Return>", lambda event, attr=attribute_name: self.process_input(attr))
@@ -1707,9 +1697,9 @@ class UserInterface(PygameWindow):
                 
                 
     def orbit_generator_window(self, parent: tkinter.Widget) -> Frame:
-        """This function constructs a Frame object containing the "Orbit 
-        generator" part of the "Selected body menu" section of the simulation 
-        interface and returns it"""
+        """This function constructs a Frame object containing the "Orbit generator" 
+        part of the "Selected body menu" section of the simulation interface 
+        and returns it."""
         
         container = Frame(parent)
         
@@ -1721,30 +1711,33 @@ class UserInterface(PygameWindow):
                                  textvariable=dropdown_stringvar)
         self.dropdown_menus["body_to_orbit_around"] = dropdown_menu
         
+        # We now give that dropdown menu a binding when selected and add it to the screen
         dropdown_menu.bind(
             "<<ComboboxSelected>>", 
             lambda event: self.process_input("body_to_orbit_around"))
         dropdown_menu.grid(row=1, sticky="w", padx=(120, 0))
         
-        # Next we create the label and textbox for the semi major axis length
+        # Next we create the label and textbox for the semi major axis length textbox
         label = Label(container, text="Semi-major axis length (su, >= 0): ")
         label.grid(row=2, sticky="w")
         
+        # We now create that textbox and its bindings and then add it to the screen
         textbox_stringvar = StringVar(self.main_window, "0")
         self.stringvars["semi_major_axis_length"] = textbox_stringvar
         textbox = Entry(container, width=11, textvariable=textbox_stringvar)
+        
         textbox.bind("<Return>", 
                      lambda event: self.process_input("semi_major_axis_length"))
           
-        def focus_out_command():
+        def focus_out_command(event):
             translated_length = self.translate_space_units(
                 self.semi_major_axis_length, 
                 "semi_major_axis_length", 
                 "to"
             )
-            textbox_stringvar.set(f"{translated_length():.3e}")
-            
+            textbox_stringvar.set(f"{translated_length:.3e}")
         textbox.bind("<FocusOut>", focus_out_command)
+        
         textbox.grid(row=2, sticky="w", padx=(185, 0))
         
         # Finally we create a button that, when clicked, generates the stable orbit
@@ -1757,7 +1750,7 @@ class UserInterface(PygameWindow):
 
     def graphs_window(self, parent: tkinter.Widget) -> Frame:
         """This function constructs a Frame object containing the "Graphs" 
-        section of the simulation interface and returns it"""
+        section of the simulation interface and returns it."""
         
         container = Frame(parent)
         
@@ -1765,29 +1758,23 @@ class UserInterface(PygameWindow):
         
         # Contains all of the labels of parameters the user can choose to graph
         graph_attribute_options = (
-            "nothing", "selected body x coordinate", 
-            "selected body y coordinate", "selected body velocity direction", 
-            "selected body velocity magnitude",  "selected body x velocity", 
-            "selected body y velocity", 
-            "selected body acceleration direction", 
-            "selected body acceleration magnitude",
+            "nothing", "selected body x coordinate", "selected body y coordinate", 
+            "selected body velocity direction", "selected body velocity magnitude",  
+            "selected body x velocity", "selected body y velocity", 
+            "selected body acceleration direction", "selected body acceleration magnitude",
             "selected body x acceleration", "selected body y acceleration",
             "selected body momentum magnitude", "selected body x momentum",
-            "selected body y momentum", "selected body kinetic energy",
-            "selected body angular velocity" , 
-            "selected body angular momentum",
-            "total x velocity", "total y velocity", 
-            "total velocity magnitude", "total x acceleration",
-            "total y acceleration", "total acceleration magnitude",
-            "total x momentum", "total y momentum",
-            "total momentum magnitude", "total kinetic energy",
-            "total angular velocity", "total angular momentum")
+            "selected body y momentum", "selected body kinetic energy", 
+            "selected body angular velocity", "selected body angular momentum",
+            "total x velocity", "total y velocity", "total velocity magnitude", 
+            "total x acceleration", "total y acceleration", "total acceleration magnitude",
+            "total x momentum", "total y momentum", "total momentum magnitude", 
+            "total kinetic energy", "total angular velocity", "total angular momentum")
         
         for i in range(10): # We now add 10 individual graph boxes
             graph_container = Frame(frame)
             
-            # We now create the graph canvas and draw the graph axes and
-            # labels, which are permanent
+            # We now create the graph canvas and draw the graph axes and labels
             canvas = Canvas(graph_container, width=200, height=150, background="white")
             
             # Draw the x axis and its label
@@ -1798,7 +1785,7 @@ class UserInterface(PygameWindow):
             canvas.create_line(25, 20, 25, 130, fill="black")
             canvas.create_text(10, 75, text="Parameter value", angle=90)
             
-            canvas.grid(sticky="w", row=0)
+            canvas.grid(sticky="w", row=0) # Add the graph canvas to the graph box
             
             # Next we add the dropdown menu to the graph box for the selected parameter
             label = Label(graph_container, text="Selected parameter: ")
@@ -1813,11 +1800,11 @@ class UserInterface(PygameWindow):
             Style().configure("TCombobox", postoffset=(0, 0, 150, 0))
             
             # When an option is selected in the dropdown, we modify self.graphs to clear
-            # this graph's data points and set the attribute name to the seelcted one
+            # this graph's data points and set the attribute name to the selected one
             def on_option_select(event, graph_index=i):
                 selected_attribute_name = self.label_to_attribute_name(event.widget.get())
                 original_info_list = self.graphs[graph_index]
-                new_info_list = original_info_list[:4] + [[], selected_attribute_name]
+                new_info_list = original_info_list[:-2] + [[], selected_attribute_name]
                 self.graphs[graph_index] = new_info_list
             dropdown_menu.bind("<<ComboboxSelected>>", on_option_select)
             
@@ -1840,6 +1827,7 @@ class UserInterface(PygameWindow):
                 "<Return>", 
                 lambda event, index=i: self.process_input("time_range", index))
             
+            # When a user clicks away from the time range textbox its displayed value resets
             def focus_out_command(event, index=i, stringvar=time_range_stringvar):
                 time_range_value = f"{self.graphs[index][3]:.3e}"
                 stringvar.set(time_range_value)
@@ -1849,7 +1837,7 @@ class UserInterface(PygameWindow):
             
             graph_container.pack()
             
-            # Refer back to line 1463 for an explanation of what self.graphs contains
+            # Refer back to line 1458 for an explanation of what self.graphs contains
             self.graphs.append([canvas, current_value_stringvar, 
                                 time_range_stringvar, 5, [], "nothing"])
                         
@@ -1861,7 +1849,7 @@ class UserInterface(PygameWindow):
     
     def manual_window(self, parent: tkinter.Widget) -> Frame:
         """This function constructs a Frame object containing the "Manual" 
-        section of the simulation interface and returns it"""
+        section of the simulation interface and returns it."""
         
         container = Frame(parent)
         
@@ -2017,18 +2005,17 @@ class UserInterface(PygameWindow):
                 
         # This stringvar stores the current text displayed by the manual
         current_text_displayed = StringVar(container, "")
-        text_widget = Label(container, justify="left", # Justify=left left aligns the text
+        text_widget = Label(container, justify="left", # justify=left left aligns the text
                             textvariable=current_text_displayed)
         
-        # This widget will be used to show a hierarchical view of the manual topics
+        # This widget is used to show a hierarchical view of the manual topics
         navigation_interface = Treeview(container, height=20, show="tree")
         
-        # This contains tuples of tuples, each containing first a category 
-        # name and then a parent. Each category name is one of the topic names 
-        # from the text_mapping dictionary above. Parent is the id of the 
-        # topic that that topic is under. For example, the "Using textboxes" 
-        # category has parent "How to use the interface". Parent is left blank 
-        # ("") if that topic has no parent
+        # This contains tuples of tuples, each containing first a category name and then a 
+        # parent. Each category name is one of the keys / topic names from the text_mapping 
+        # dictionary above. Parent is the id of the topic that that topic is under. 
+        # For example, the "Using textboxes" category has parent "How to use the interface". 
+        # Parent is left blank ("") if that topic has no parent.
         CATEGORIES_INFO: tuple[tuple[str, str]] = (
             ("How to use the interface", ""), 
             ("Using textboxes", "How to use the interface"),
@@ -2098,18 +2085,17 @@ class UserInterface(PygameWindow):
 
 
     def label_to_attribute_name(self, label_text: str) -> str:
-        """This function converts the label text for a parameter to its 
-        attribute name (e.g. "x velocity (su s⁻¹): " is converted to "velocity.
-        x_component)."""
+        """This function converts the label text for a parameter to its attribute name 
+        (e.g. "x velocity (su s⁻¹): " is converted to "velocity.x_component)."""
         
-        # This next block converts the label text to snake case 
+        # This first block converts the label text to snake case 
         # e.g. "x velocity (su s⁻¹): " would be converted to "x_velocity"
              
         label_text = label_text.replace("selected body ", "")
         label_text = label_text.replace("?", "")
         label_text = label_text.replace(": ", "")
         
-        if "(" in label_text: # Removes brackets indicating attribute units
+        if "(" in label_text: # Removes brackets indicating attribute units (e.g. (m s⁻¹))
             bracket_index = label_text.index(" (")
             label_text = label_text[:bracket_index]
                         
@@ -2136,6 +2122,9 @@ class UserInterface(PygameWindow):
         if snake_case == "value_of_θ": attribute_name = "theta"
         elif snake_case == "value_of_ε": attribute_name = "epsilon"
         elif is_vector(snake_case):
+            # This case processes a vector attribute's label.
+            
+            # First any prefixes are removed (which are added back on at the end)
             if "engine_" in snake_case: prefix = "engine_"
             elif "total_" in snake_case: prefix = "total_"
             else: prefix = ""
@@ -2143,8 +2132,7 @@ class UserInterface(PygameWindow):
             snake_case = snake_case.replace(prefix, "")
             snake_case = snake_case.replace("coordinate", "position")
             
-            # If true we need to transform this snake_case from "x_<vector>" 
-            # to "<vector>_x_component"
+            # This converts the case "x_<vector>" to "<vector>_x_component"
             if snake_case[0] in ("x", "y"):
                 snake_case = f"{snake_case[2:]}_{snake_case[0]}_component"
             
@@ -2167,17 +2155,15 @@ class UserInterface(PygameWindow):
         
         # A set of all attributes with units that include space units
         ATTRIBUTES_WITH_SPACE = set((
-            "semi_major_axis_length", "position.x_component", 
-            "position.y_component", "radius", "velocity.magnitude", 
-            "velocity.x_component", "velocity.y_component", 
-            "acceleration.magnitude", "acceleration.x_component", 
-            "acceleration.y_component", "engine_acceleration.magnitude", 
-            "engine_acceleration.x_component", "kinetic_energy",
-            "engine_acceleration.y_component", "momentum.magnitude", 
-            "momentum.x_component", "momentum.y_component", 
-            "angular_momentum", "epsilon"))
+            "semi_major_axis_length", "position.x_component", "position.y_component", 
+            "radius", "velocity.magnitude", "velocity.x_component", "velocity.y_component", 
+            "acceleration.magnitude", "acceleration.x_component", "acceleration.y_component",
+            "engine_acceleration.magnitude", "engine_acceleration.x_component", 
+            "kinetic_energy", "engine_acceleration.y_component", "momentum.magnitude", 
+            "momentum.x_component", "momentum.y_component", "angular_momentum", "epsilon"))
         
         if attribute_name in ATTRIBUTES_WITH_SPACE:
+            # To convert between units we multiply or divide by a certain scalar value
             match self.space_units:
                 case "Kilometers": conversion_scalar = 1000
                 case "Astronomical units (AU)": conversion_scalar = 149597870700
@@ -2185,14 +2171,14 @@ class UserInterface(PygameWindow):
                 case "Meters": conversion_scalar = 1
                 
             match mode:
-                case "from": order = 1 # This means we multiply by the scalar
-                case "to": order = -1 # This means we divide by the scalar
+                case "from": order = 1 # This means we are multiplying by the scalar
+                case "to": order = -1 # This means we dividing by the scalar
                 
             # These attributes have a factor of su² so order of conversion is doubled
             if "kinetic_energy" in attribute_name or "angular_momentum" in attribute_name:
                 order *= 2
                 
-            # We need to account for centering offsets in coordinates
+            # Finally, We need to account for centering offsets in coordinates
             elif attribute_name == "position.x_component":
                 value += order*self.centered_body.position.x_component
             elif attribute_name == "position.y_component":
@@ -2208,11 +2194,8 @@ class UserInterface(PygameWindow):
                       graph_index: int|None = None) -> None:
         """This function checks a user's input for a certain attribute, and 
         sets the attribute to their inputted value if their input was valid. 
-        It also updates the displayed value for that attribute."""
-        
-        # graph_index not being None or attribute_name being None means we are 
-        # updating the time range value at self.graphs[graph_index].
-        # This also applies for self.check_valid_input
+        It also updates the displayed value for that attribute. graph_index is 
+        inputted when updating the time range value of a graph."""
             
         is_valid_input, input = self.check_valid_input(attribute_name, graph_index)
         
@@ -2225,13 +2208,13 @@ class UserInterface(PygameWindow):
             # First we remove the focus from the widget to show we updated the value
             self.main_window.focus_set()
             
-            # Now we set the atribute to the inputted value since the input was valid
+            # Now we set the atribute's value to the inputted value
             if attribute_name == "time_range":
                 # This sets the time range value at self.graphs[index]
                 self.graphs[graph_index][3] = input 
             else:
                 if attribute_name == "id":
-                    # The selected body's id changes so we update self.contained_bodies
+                    # The selected body's id changes so we must update self.contained_bodies
                     self.contained_bodies.pop(self.selected_body.id)
                     self.contained_bodies[input] = self.selected_body
                     
@@ -2241,31 +2224,30 @@ class UserInterface(PygameWindow):
                     attribute_name = attribute_name.replace("momentum", "velocity")
                     selected_body_mass = self.selected_body.mass
                     exec(f"self.selected_body.{attribute_name} = input/selected_body_mass")
-                else:
+                else: # Otherwise, we simply set the object's attribute to the input
                     exec(f"{object_name}.{attribute_name} = input")        
                                    
         # We now set the value displayed in this attribute's textbox to the actual value.
         # This will display the user's input being cleared if it was invalid.
         
-        non_textbox_attributes = ("body_to_orbit_around","centered_body")
+        non_textbox_attributes = ("body_to_orbit_around", "centered_body")
         if attribute_name not in non_textbox_attributes and attribute_name != "time_range":
             value_to_display = eval(f"{object_name}.{attribute_name}")
-            value_to_display = self.translate_space_units(value_to_display, 
-                                                          attribute_name, 
-                                                          "to")
+            value_to_display = self.translate_space_units(
+                value_to_display, attribute_name, "to")
             if attribute_name not in ("is_immobile", "id"):
                 value_to_display = f"{value_to_display:.3e}"
             self.stringvars[attribute_name].set(str(value_to_display))
         elif attribute_name == "time_range":
             # We set the time range stringvar at self.graphs[graph_index]
-            time_range = f"{self.graphs[graph_index][3]:.3e}"
-            self.graphs[graph_index][2].set(time_range)
+            time_range_value = self.graphs[graph_index][3]
+            self.graphs[graph_index][2].set(f"{time_range_value:.3e}")
                  
          
     def check_valid_input(self,
                           attribute_name: str, 
                           graph_index: int|None) -> tuple[bool, str|int|float]:
-        """This function retrieves the input to an attribute, and returns 
+        """This function receives the input to an attribute, and returns 
         whether the input was valid or not. It also returns the processed input."""
         
         if attribute_name == "time_range":
@@ -2283,6 +2265,7 @@ class UserInterface(PygameWindow):
         
         if attribute_name == "is_immobile":
             match inputted_value.lower():
+                # The input must be a string of either true or false to be valid
                 case "true": processed_value = True
                 case "false": processed_value = False
                 case _: valid_input = False
@@ -2314,9 +2297,8 @@ class UserInterface(PygameWindow):
         else: # Otherwise the input is simply numerical
             try:
                 float_value = float(inputted_value) # May raise a ValueError
-                processed_value = self.translate_space_units(float_value, 
-                                                             attribute_name, 
-                                                             "from")
+                processed_value = self.translate_space_units(
+                    float_value, attribute_name, "from")
                 valid_input = not((attribute_name in GTEZ and processed_value < 0) 
                                   or (attribute_name in GTZ and processed_value <= 0))
             except ValueError:
@@ -2344,6 +2326,7 @@ class UserInterface(PygameWindow):
         It sets the values that can be selected and also performs any checks needed."""
         
         # Find and set the dropdown options for the centered body dropdown menu
+        # This is simply all body ids, plus either "Origin" or "Center of mass"
         dropdown_options = ["Origin"]
         dropdown_menu = self.dropdown_menus["centered_body"]
         if len(self.contained_bodies) > 0:
@@ -2365,10 +2348,11 @@ class UserInterface(PygameWindow):
         if self.selected_body is None: # If so then there are no dropdown options
             dropdown_menu.set("") # Sets the selected value of the dropdown menu to ""
         else: # Otherwise the options are all body ids except for the selected body id
-            for id in self.contained_bodies:
-                if id != self.selected_body.id:
-                    dropdown_options.append(id)
-                    
+            dropdown_options = [id for id in self.contained_bodies 
+                                if id != self.selected_body.id]
+            
+            # If the selection doesn't exist, then that means the selected body to orbit 
+            # around was deleted, so we set it to None and clear teh dropdown menu.
             if dropdown_menu.get() not in dropdown_options:
                 self.body_to_orbit_around = None
                 dropdown_menu.set("")
@@ -2381,7 +2365,6 @@ class UserInterface(PygameWindow):
         the properties of a body in the selected body menu attributes window."""
         
         for attribute_name in self.BODY_ATTRIBUTES:
-            
             # If the user is currently inputting a value for this attribute, 
             # we do not set the stringvar (as this would clear their input)
             try:
@@ -2394,10 +2377,10 @@ class UserInterface(PygameWindow):
             except KeyError: # A bug in tkinter sometimes happens which causes a KeyError
                 pass
             
-            # Otherwise, we set the stringvar for that attribute to the 
-            # value of the attribute it should be displaying
+            # Otherwise, we set the stringvar for that attribute to 
+            # the value of the attribute it should be displaying
             if self.selected_body is None:
-                value = "-"
+                value = "-" # If there is no selected body all textboxes will display "-"
             else:
                 if attribute_name == "angular_velocity":
                     value = self.selected_body.angular_velocity(self.centered_body, 
@@ -2441,19 +2424,18 @@ class UserInterface(PygameWindow):
                 # First we set the value shown inside the current value textbox
                 if "total" in attribute_name:
                     attribute_name = attribute_name.replace("total_", "")
-                    displayed_value = self.total_of_property(attribute_name, 
-                                                             self.centered_body)
+                    displayed_value = self.total_of_property(
+                        attribute_name, self.centered_body)
                 elif attribute_name == "angular_velocity":
-                    displayed_value = self.selected_body.angular_velocity(self.centered_body,
-                                                                          self.time_step)
+                    displayed_value = self.selected_body.angular_velocity(
+                        self.centered_body, self.time_step)
                 elif attribute_name == "angular_momentum":
                     displayed_value = self.selected_body.angular_momentum(self.centered_body)
                 else:
                     displayed_value = eval(f"self.selected_body.{attribute_name}")
                     
-                displayed_value = self.translate_space_units(displayed_value, 
-                                                             attribute_name, 
-                                                             "to")
+                displayed_value = self.translate_space_units(
+                    displayed_value, attribute_name, "to")
                 current_value_stringvar.set(f"{displayed_value:.3e}")
                 
                 # Now we add a data point and remove any points too far in the past
@@ -2464,22 +2446,24 @@ class UserInterface(PygameWindow):
                         
                     # Remove data points that are too far in the past.
                     frame_range = self.frames_per_second*time_range
-                    number_to_remove = max(0, int(len(data_points)-frame_range))
+                    number_to_remove = max(0, int(len(data_points) - frame_range))
                     del data_points[:number_to_remove]
                 
             canvas.delete("data_points") # Clear the previously drawn data points
-            canvas.delete("warning") # Delete the floating point warning text (see line 2495)
-            if len(data_points) >= 2:
+            canvas.delete("warning") # Delete the small change warning text (see line 2495)
+            if len(data_points) >= 2: # There must be at least 2 points to draw a graph
                 self.draw_graph(canvas, data_points)      
                 
             # Set the data points stored in self.graphs to the newly updated ones
             self.graphs[index][4] = data_points
                             
             
-    def draw_graph(self, canvas: Canvas, data_points) -> None:
+    def draw_graph(self, 
+                   canvas: Canvas, 
+                   data_points: list[tuple[int|float, int|float]]) -> None:
         """This function draws a graph on a given tkinter 
         Canvas object for the given data points."""
-            
+                    
         x_values = [x for x, y in data_points]
         y_values = [y for x, y in data_points]
         min_x, max_x = min(x_values), max(x_values)
@@ -2487,13 +2471,13 @@ class UserInterface(PygameWindow):
 
         # We use these values to calculate scale factors and offsets used to scale the
         # data points to fit inside of the 100x150 pixel area we draw them inside of
-        width_scaling = 150/(max_x-min_x)
-        width_offset = 25-min_x*width_scaling
-        height_scaling = 100/((max_y-min_y)+(max_y-min_y==0))
-        height_offset = 25-min_y*height_scaling
+        width_scaling = 150 / (max_x-min_x)
+        width_offset = 25 - min_x*width_scaling
+        height_scaling = 100 / ((max_y-min_y)+(max_y-min_y==0))
+        height_offset = 25 - min_y*height_scaling
         
         # If there is a very small change in the value of the parameter, we 
-        # warn the user there may be a floating point error.
+        # warn the user there may be a floating point error (see the manual).
         last_y = f"{data_points[-1][1]:.3e}"
         second_to_last_y = f"{data_points[-2][1]:.3e}"
         if last_y == second_to_last_y:
@@ -2501,7 +2485,7 @@ class UserInterface(PygameWindow):
                                tags="warning", fill="red")
         
         # We now transform the data points and draw them onto the graph
-        drawn_data_points: tuple[tuple[int, int]] = []
+        drawn_data_points: list[tuple[int, int]] = []
         for x, y in data_points:
             transformed_x = x*width_scaling + width_offset
             transformed_y = 150 - (y*height_scaling + height_offset)
@@ -2515,12 +2499,12 @@ class UserInterface(PygameWindow):
         which will repeatedly execute until the user exits the program."""  
                 
         while True:
-            # Check for user events and update the pygame window 
+            # This block check for user events and updates the pygame window 
             self.check_events()                    
             self.draw_all()
             pygame.display.update()
             
-            # Updates the user interface window
+            # This block updates the user interface window
             self.set_widgets()
             self.main_window.update()
 
