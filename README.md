@@ -1,6 +1,6 @@
-# A real-time gravity simulation, according to Newton's law of gravitation (pictures from old prototype, not current)
-![image](https://github.com/MarcoBonato09/gravity-simulation/assets/99590461/e2764122-b758-45b3-bd0e-c1e6b40a6385)
-![image](https://github.com/MarcoBonato09/gravity-simulation/assets/99590461/ceaedfb6-a680-44de-b891-2bf86be69d8b)
+# A real-time gravity simulation, according to Newton's law of gravitation
+![image](https://github.com/user-attachments/assets/74c7901a-b245-4937-bd4b-429b6b45e556)
+
 
 ## The core principle of operation
 The basic principle behind this is that each body is a circle, placed in a Cartesian coordinate grid around an arbitrary origin, that stores its velocity vector in the x and y directions. 
