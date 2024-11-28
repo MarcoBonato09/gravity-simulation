@@ -7,7 +7,7 @@ from typing import Literal
 import math # Used for its sin, cos, atan2, sqrt, ceil, and degrees functions
 import os # Used for its os.kill function to forcefully exit the program
 import threading # Used to open the back-end main loop (see 2.6.2) in a separate thread
-import pygame # Used to draw the grid, bodies, orbit preview, etc.
+import pygame # Used to draw the grid, bodies, orbit preview, etc. See section 2.2.3.
 import tkinter # Used to create the user interface window
 from tkinter.ttk import Style # Used to change the appearance of widgets
 from tkinter import StringVar # Used to get and set values shown in widgets
@@ -19,7 +19,8 @@ from tkinter.ttk import Combobox, Notebook, Treeview
 
 class Vector:
     """This class represents a 2D vector and is used throughout this program.
-    The components, magnitude and direction of the vector are stored."""
+    The components, magnitude and direction of the vector are stored.
+    See section 2.5.1 for more explanatory information on this class."""
         
     def __init__(self,
                  x_component: int|float|None = None,
@@ -48,7 +49,7 @@ class Vector:
         """This function recalculates the components of 
         this vector using its magnitude and direction."""
         
-        # Here we resolve the vector into its components
+        # Here we resolve the vector into its components (see sections 1.3.1.2 and 1.3.1.3).
         self.__x_component = self.__magnitude*math.cos(self.__direction)
         self.__y_component = self.__magnitude*math.sin(self.__direction)
              
@@ -57,7 +58,7 @@ class Vector:
         """This function recalculates the magnitude and 
         direction of this vector using its components."""
                 
-        # We use the Pythagoras theorem to find this vector's magnitude
+        # We use the Pythagoras theorem to find this vector's magnitude (see section 1.3.1.2)
         self.__magnitude = math.sqrt(self.__x_component**2 + self.__y_component**2)
         
         # The atan2 function returns a vector's direction given its components (see 1.3.1.2)
@@ -161,7 +162,7 @@ class Vector:
     def soften(self, softening_factor: int|float) -> None:
         """This function softens this vector using a given softening factor.
         By definition, this means settings its magnitude to 
-        √(old_magnitude² + softening_factor²)."""
+        √(old_magnitude² + softening_factor²). See section 1.3.2.5."""
         
         self.magnitude = math.sqrt(self.magnitude**2 + softening_factor**2)
     
@@ -256,7 +257,8 @@ class Vector:
 class Body:
     """Bodies are the basic items that move in the simulation, representing 
     objects such as planets or stars. They are circular with uniformly 
-    distributed masses and have numerous attributes introduced below."""
+    distributed masses and have numerous attributes introduced below.
+    See section 2.5.2 for further explanations regarding this class."""
     
     def __init__(self, 
                  id: str, 
@@ -280,10 +282,10 @@ class Body:
         
         
     def step_euler(self, time_step: int|float) -> None:
-        """This function uses the Euler method to update the velocity and 
-        position of this body given the time step parameter (in seconds). 
-        The higher the time step parameter, the further the body will move, 
-        but the less accurate its movement. The opposite is also true. 
+        """See section 1.3.2.3 for an explanation of the Euler method. This function uses
+        the Euler method to update the velocity and position of this body given the time 
+        step parameter (in seconds). The higher the time step parameter, the further the 
+        body will move, but the less accurate its movement. The opposite is also true. 
         If the body is immobile its velocity and acceleration are set to 0."""
         
         if not self.is_immobile:
@@ -327,10 +329,17 @@ class Body:
         
         # <position_vector_2> - <position_vector_1> gives the displacement vector from 
         # position 1 to position 2 (see 1.3.1.3). This is used throughout this program.
-        previous_angle = (centered_body.position-self.previous_position).direction
-        current_angle = (centered_body.position-self.position).direction
-        angular_velocity = (current_angle-previous_angle)/time_step
-                
+        previous_angle = (self.previous_position-centered_body.position).direction
+        current_angle = (self.position-centered_body.position).direction
+        
+        # We check if our direction has moved across the negative x axis
+        if -math.pi <= previous_angle <= -math.pi/2 and math.pi/2 <= current_angle <= math.pi:
+            angular_velocity = -(previous_angle-current_angle+2*math.pi)/time_step
+        elif -math.pi <= current_angle <= -math.pi/2 and math.pi/2 <= previous_angle <= math.pi:
+            angular_velocity = -(current_angle-previous_angle+2*math.pi)/time_step
+        else:
+            angular_velocity = (current_angle-previous_angle)/time_step
+                            
         return angular_velocity
     
     
@@ -350,9 +359,10 @@ class Body:
     
 
 class BarnesHutNode:
-    """This class represents one of the nodes in a Barnes-Hut quadtree. 
+    """This class represents one of the nodes in a Barnes-Hut quadtree (see section 1.3.4.2). 
     It also stores the attributes of the square in space the node represents.
-    This is called the square of a node, which is terminology used throughout the program."""
+    This is called the square of a node, which is terminology used throughout the program.
+    See section 2.5.3."""
         
     def __init__(self,
                  contained_bodies: list[Body],
@@ -381,8 +391,9 @@ class BarnesHutNode:
         
 class BarnesHutTree:
     """This class is responsible for initializing and storing the root node of a
-    Barnes-Hut quadtree Operations such as traversal for  
-    finding forces or collision detection is handled by the Simulation class."""
+    Barnes-Hut quadtree (see section 1.3.4.2). Operations such as traversal for  
+    finding forces or collision detection is handled by the Simulation class.
+    See section 2.5.4."""
     
     def __init__(self, contained_bodies: tuple[Body]) -> None:
         """This function initializes the root node of the quadtree given a 
@@ -487,9 +498,9 @@ class Simulation:
     """This class is responsible for acceleration calculation, moving each body and 
     handling collisions. If there is a collision between bodies they are merged.
     The user may choose between the Direct Sum or Barnes-Hut algorithms for acceleration
-    calculation and collision handling."""
+    calculation and collision handling. See section 2.5.5"""
     
-    G = 6.6743e-11 # The constant used in Newton's law of gravitation
+    G = 6.6743e-11 # The constant used in Newton's law of gravitation (see section 1.3.2.1)
         
     def __init__(self) -> None:
         """This functions initializes the attributes of the simulation."""
@@ -499,14 +510,14 @@ class Simulation:
         # adding or removing bodies from the simulation
         self.contained_bodies: dict[str, Body] = {}
 
-        self.time_step = 1 # The parameter used for the Euler method 
+        self.time_step = 1 # The parameter used for the Euler method (see section 1.3.2.3)
         self.time_elapsed = 0 # This is the total time that has passed in the simulation
         
-        # The parameter for the Barnes-Hut algorithm. Higher values 
+        # The parameter for the Barnes-Hut algorithm (see section 1.3.4.4). Higher values 
         # mean a less accuracate but faster simulation. The opposite is also true.
         self.theta = 0.5
         
-        # The parameter for the smoothening technique. Higher values 
+        # The parameter for the smoothening technique (see section 1.3.2.5). Higher values 
         # mean larger tolerance to acceleration values spiking but less accuracy.
         self.epsilon = 0
         
@@ -566,10 +577,11 @@ class Simulation:
         
     def have_bodies_collided(self, body_1: Body, body_2: Body) -> bool:
         """This function returns True or False based on if two bodies have collided.
-        This also checks if they have collided inter-frame."""
+        This also checks if they have collided inter-frame (see section 1.3.6).
+        This is an implementation of the pseudocode shown in section 1.3.6.3."""
                 
         # a, b and c are the coefficients of the quadratic equation used to 
-        # check for inter-frame collisions
+        # check for inter-frame collisions, shown in section 1.3.6.2
         collided_inter_frame = False
         a = (body_1.velocity - body_2.velocity).magnitude**2
         b = 2*((body_1.position-body_2.position)*(body_1.velocity-body_2.velocity))
@@ -588,7 +600,7 @@ class Simulation:
             
             # We now check if the time step parameter is between lesser_root and larger_root.
             # If so, the bodies have collided inter-frame.
-            if lesser_root <= self.time_step <= larger_root:
+            if self.time_step >= lesser_root and larger_root >= 0:
                 collided_inter_frame = True
         
         # The other condition to see if the bodies have collided is if they are inside each
@@ -633,7 +645,7 @@ class Simulation:
     def merge_bodies_in_same_location(self) -> None:
         """This function merges bodies with the same position, which is needed
         as building the Barnes-Hut quadtree will recurse infinitely if two 
-        bodies are in the same location"""
+        bodies are in the same location (see section 1.3.4.3)."""
         
         # This dictionary maps coordinates to a body
         # It is used to quickly check if two bodies are in the same location
@@ -654,7 +666,8 @@ class Simulation:
           
     def direct_sum_collision_handling(self) -> None:
         """This function merges bodies that have collided using the Direct Sum method.
-        This means repeatedly checking for collisions between every pair of bodies."""
+        This means repeatedly checking for collisions between every pair of bodies.
+        This is an implementation of the psuedocode shown in section 1.3.7.2."""
                     
         merge_occured = True
         while merge_occured: # The merging process is repeated until no merges happen
@@ -680,7 +693,9 @@ class Simulation:
 
     def optimized_direct_sum_collision_handling(self) -> None:
         """This function is an optimized version of direct_sum_collision_handling,
-        but with the same O(n²) time complexity"""
+        but with the same O(n²) time complexity. Read section 1.3.7.3 for an 
+        explanation of why this version is optimized. This is an implementation of the 
+        psuedocode shown in section 1.3.7.4."""
         
         bodies_to_check = list(self.contained_bodies.values())
         
@@ -712,7 +727,8 @@ class Simulation:
     def barnes_hut_collision_handling(self) -> None:
         """This function merges bodies that have collided using the Barnes-Hut quadtree.
         For each body, it does this by excluding clusters of other bodies too far away to 
-        collide with that body (therefore speeding up the collision detection)."""
+        collide with that body (therefore speeding up the collision detection).
+        This is an implementation of the pseudocode shown in section 1.3.4.7."""
         
         merge_occured = True
         while merge_occured: # The process is repeated until no merges happen
@@ -763,7 +779,8 @@ class Simulation:
         """This function uses the direct sum method to find the exact 
         acceleration on each body. This means finding the gravitational 
         attraction between each pair of bodies, resolving it into acceleration 
-        vectors and adding them to the acceleration of each body."""
+        vectors and adding them to the acceleration of each body.
+        This implements part of the pseudocode shown in section 1.3.2.4."""
                 
         contained_bodies_tup = tuple(self.contained_bodies.values())
                 
@@ -782,7 +799,7 @@ class Simulation:
                 # gravitational attraction between body_1 and body_2 on each body
                 
                 # We now find the softened displacement vectors and distance
-                # between this pair of bodies
+                # between this pair of bodies (see section 1.3.2.5 for why we do this).
                 displacement_vector_1 = body_2.position - body_1.position
                 displacement_vector_1.soften(self.epsilon)
                 displacement_vector_2 = -displacement_vector_1
@@ -790,7 +807,7 @@ class Simulation:
                             
                 # The magnitude of the acceleration due to gravity on each body 
                 # is found using Newton's second law (a = F/m), Newton's law 
-                # of gravitation and softening.
+                # of gravitation and softening. See section 1.3.2.1 for an explanation.
                 acceleration_magnitude_1 = self.G*body_2.mass/softened_distance**2
                 acceleration_magnitude_2 = self.G*body_1.mass/softened_distance**2
                 
@@ -811,7 +828,8 @@ class Simulation:
         """This function uses the Barnes-Hut algorithm to find the approximate acceleration
         on each body. It approximates because the acceleration of a body towards a group 
         of distant bodies is found by treating the group as a point mass and using its 
-        center of mass and total mass as if it was a single body."""
+        center of mass and total mass as if it was a single body. 
+        This is an implementation of the psuedocode shown in section 1.3.4.5"""
         
         self.merge_bodies_in_same_location()
         contained_bodies_tup = tuple(self.contained_bodies.values())
@@ -834,7 +852,7 @@ class Simulation:
                 softened_dist = displacement_vector.magnitude
                 
                 # If the square's width divided by the distance is less than theta it is
-                # considered far away. In this case, its effect on 
+                # considered far away (see section 1.3.4.4.4). In this case, its effect on 
                 # the body will be approximated by treating the bodies in this node's square 
                 # as a single body (using the center of mass and total mass of the bodies).
                 # We also do this if it contains only 1 body (if that body != this body)
@@ -848,7 +866,7 @@ class Simulation:
                     and not (contains_one_body and contained_body == body)):
                     
                     # The approximated magnitude of the acceleration due to gravity on
-                    # the body due to the bodies in the node's square
+                    # the body due to the bodies in the node's square (see section 1.3.2.1).
                     acceleration_magnitude = self.G*node.total_mass/softened_dist**2
                     
                     # The direction of the acceleration vector is the same as the direction
@@ -929,7 +947,7 @@ class Simulation:
 
 class PygameWindow(Simulation):
     """This class is responsible for drawing the grid, the bodies on it, etc. 
-    It also checks for user events (e.g. clicking on a body)."""    
+    It also checks for user events (e.g. clicking on a body). See section 2.5.6."""    
     
     def __init__(self) -> None:
         """This function initializes this object and its attributes along with
@@ -967,7 +985,7 @@ class PygameWindow(Simulation):
         self.grid_offset = Vector(0, 0) # The offset due to the user dragging the grid around
         self.adding_body_mode = False # If True, the user can click on screen to add a body
         
-        # These attributes store input from the orbit generation window
+        # These attributes store input from the orbit generation window (see section 2.3.2.5)
         self.body_to_orbit_around: Body|None = None
         self.semi_major_axis_length = 0
         
@@ -1264,8 +1282,8 @@ class PygameWindow(Simulation):
     def draw_orbit_preview(self) -> None:
         """This function draws an orbit preview for the selected body if a user has inputted 
         both a semi major axis length and a body to orbit around. This preview depends 
-        on the assumptions made in the equation for calculating a stable orbit, 
-        so if any of these are broken this preview may not be accurate."""
+        on the assumptions made in the equation for calculating a stable orbit (see section 
+        1.3.3), so if any of these are broken this preview may not be accurate."""
                     
         displacement_vector = self.body_to_orbit_around.position-self.selected_body.position
         distance = displacement_vector.magnitude # The distance between the two bodies
@@ -1380,7 +1398,8 @@ class PygameWindow(Simulation):
     def generate_stable_orbit(self) -> None:
         """This function generates a stable orbit velocity for the selected body around 
         the body to orbit around at the semi major axis length specified. This uses the 
-        Vis Viva equation and the assumptions that come with it."""
+        Vis Viva equation and the assumptions (see section 1.3.3.1) that come with it.
+        This is an implementation of the pseudocode shown in section 2.8.2."""
         
         # First we find the distance between the centers of the two bodies
         displacement_vector = self.body_to_orbit_around.position-self.selected_body.position
@@ -1400,7 +1419,7 @@ class PygameWindow(Simulation):
 class UserInterface(PygameWindow):
     """This class is responsible for the user interface window. Here the user can view, 
     modify and graph various simulation parameters, along with generating stable orbits 
-    and reading a user manual."""
+    and reading a user manual. See section 2.5.7 for further explanation of this class."""
     
     BODY_ATTRIBUTES = set(( # A set of all body attributes
         "id", "is_immobile", "position.x_component", "position.y_component", 
@@ -1442,6 +1461,7 @@ class UserInterface(PygameWindow):
         self.dropdown_menus: dict[str, Combobox] = {}
         
         # This attribute contains lists of information about each graph in the graphs window
+        # The graphs window is introduced in section 2.3.2.6
         # Each list contains, in order:
         #   - The tkinter Canvas widget the graph is drawn on
         #   - The stringvar for the textbox showing the current value of the parameter
@@ -1455,7 +1475,7 @@ class UserInterface(PygameWindow):
         self.construct_user_interface()
         
         # We now start the back end main loop in a separate thread and then 
-        # start the front end main loop.
+        # start the front end main loop. This is explained in section 2.2.3.
         back_end_thread = threading.Thread(target=self.back_end_main_loop)
         back_end_thread.start()
         self.front_end_main_loop() 
@@ -1504,7 +1524,8 @@ class UserInterface(PygameWindow):
                         
     def buttons_window(self, parent: tkinter.Widget) -> Frame:
         """This function constructs a Frame object containing the "Basic 
-        buttons" section of the simulation interface and returns it."""
+        buttons" section of the simulation interface and returns it.
+        See section 2.3.2.2 for a diagram and further explanation."""
         
         container = Frame(parent)
         
@@ -1529,7 +1550,8 @@ class UserInterface(PygameWindow):
 
     def parameters_window(self, parent: tkinter.Widget) -> Frame:
         """This function constructs a Frame object containing the "Simulation 
-        parameters" section of the simulation interface and returns it."""
+        parameters" section of the simulation interface and returns it.
+        See section 2.3.2.3 for a diagram and further explanation."""
         
         container = Frame(parent)
         
@@ -1638,7 +1660,7 @@ class UserInterface(PygameWindow):
     def selected_body_info_window(self, parent: tkinter.Widget) -> Frame:
         """This function constructs a Frame object containing the "Attributes"
         part of the "Selected body menu" section of the simulation interface 
-        and returns it."""
+        and returns it. See section 2.3.2.4 for a diagram and further explanation."""
         
         container = Frame(parent)
             
@@ -1699,7 +1721,7 @@ class UserInterface(PygameWindow):
     def orbit_generator_window(self, parent: tkinter.Widget) -> Frame:
         """This function constructs a Frame object containing the "Orbit generator" 
         part of the "Selected body menu" section of the simulation interface 
-        and returns it."""
+        and returns it. See section 2.3.2.5 for a diagram and further explanation."""
         
         container = Frame(parent)
         
@@ -1750,7 +1772,8 @@ class UserInterface(PygameWindow):
 
     def graphs_window(self, parent: tkinter.Widget) -> Frame:
         """This function constructs a Frame object containing the "Graphs" 
-        section of the simulation interface and returns it."""
+        section of the simulation interface and returns it. 
+        See section 2.3.2.6 for a diagram and further explanation."""
         
         container = Frame(parent)
         
@@ -1849,7 +1872,8 @@ class UserInterface(PygameWindow):
     
     def manual_window(self, parent: tkinter.Widget) -> Frame:
         """This function constructs a Frame object containing the "Manual" 
-        section of the simulation interface and returns it."""
+        section of the simulation interface and returns it. 
+        See section 2.3.2.7 for a diagram and further explanation."""
         
         container = Frame(parent)
         
@@ -2268,7 +2292,9 @@ class UserInterface(PygameWindow):
                 # The input must be a string of either true or false to be valid
                 case "true": processed_value = True
                 case "false": processed_value = False
-                case _: valid_input = False
+                case _: 
+                    valid_input = False
+                    processed_value = None
                 
         elif attribute_name == "id":
             lowercase_ids = (id.lower() for id in self.contained_bodies)
