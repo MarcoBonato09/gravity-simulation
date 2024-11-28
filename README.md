@@ -1,4 +1,4 @@
-# A real-time gravity simulation, according to Newton's law of gravitation
+# A real-time gravity simulation, according to Newton's law of gravitation (school project, writeup attached)
 
 https://github.com/user-attachments/assets/58e2073d-c703-4738-8f28-a006eaab4186
 
